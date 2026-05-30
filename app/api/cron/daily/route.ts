@@ -11,11 +11,15 @@ function authorized(req: NextRequest): boolean {
 }
 
 async function fetchJson(url: string): Promise<unknown> {
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
-  const res = await fetch(`${base}${url}`, {
-    signal: AbortSignal.timeout(55_000), // stay inside Vercel's 60 s function limit
+  // VERCEL_PROJECT_PRODUCTION_URL is always the stable production domain (no https://)
+  // Fall back to VERCEL_URL (deployment-specific) then localhost for local dev
+  const host =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL ??
+    "localhost:3000";
+  const protocol = host.startsWith("localhost") ? "http" : "https";
+  const res = await fetch(`${protocol}://${host}${url}`, {
+    signal: AbortSignal.timeout(55_000),
   });
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
   return res.json();
