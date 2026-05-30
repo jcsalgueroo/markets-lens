@@ -1,12 +1,17 @@
 /**
- * Vercel KV helpers for MarketLens snapshot cache.
+ * Upstash Redis helpers for MarketLens snapshot cache.
  *
  * Keys follow the pattern  snapshot:<dataset>
  * TTL is 90 000 s (~25 h) so data survives even if a cron fires slightly late.
  */
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 
-const SNAPSHOT_TTL = 90_000; // seconds
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
+
+const SNAPSHOT_TTL = 90_000; // seconds (~25 h)
 
 export type SnapshotKey =
   | "snapshot:equities"
@@ -17,11 +22,11 @@ export type SnapshotKey =
   | "snapshot:ts";
 
 export async function kvSet(key: SnapshotKey, value: unknown): Promise<void> {
-  await kv.set(key, JSON.stringify(value), { ex: SNAPSHOT_TTL });
+  await redis.set(key, JSON.stringify(value), { ex: SNAPSHOT_TTL });
 }
 
 export async function kvGet<T = unknown>(key: SnapshotKey): Promise<T | null> {
-  const raw = await kv.get<string>(key);
+  const raw = await redis.get<string>(key);
   if (raw == null) return null;
   try {
     return JSON.parse(raw) as T;
@@ -31,5 +36,5 @@ export async function kvGet<T = unknown>(key: SnapshotKey): Promise<T | null> {
 }
 
 export async function kvSetTimestamp(): Promise<void> {
-  await kv.set("snapshot:ts", new Date().toISOString(), { ex: SNAPSHOT_TTL });
+  await redis.set("snapshot:ts", new Date().toISOString(), { ex: SNAPSHOT_TTL });
 }
