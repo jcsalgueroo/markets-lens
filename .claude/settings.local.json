@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(if \\(-not $?\\) { \"Directory does not exist or is empty\" })",
+      "PowerShell($content = Get-Content \"C:\\\\Users\\\\jcsal\\\\.claude\\\\projects\\\\C--Users-jcsal-OneDrive-Desktop-markets-lens\\\\d3e49415-d0d8-40e3-bfa8-95feb75c5828\\\\tool-results\\\\bzgcqbkt3.txt\" -Raw; $json = $content | ConvertFrom-Json; $json.eurArea | ConvertTo-Json -Depth 4)"
+    ]
+  }
+}
