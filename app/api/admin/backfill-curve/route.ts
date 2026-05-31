@@ -11,7 +11,7 @@
  * with Authorization: Bearer <CRON_SECRET> header.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { fetchFredCsv } from "@/lib/fred";
 import { blobBulkWriteCurveHistory } from "@/lib/blob";
 import type { CurveSnapshot } from "@/lib/blob";
@@ -36,17 +36,9 @@ const TENOR_ORDER = ["3M", "6M", "1Y", "2Y", "5Y", "7Y", "10Y", "20Y", "30Y"] as
 // Minimum number of tenors with valid data for a day to be included
 const MIN_TENORS = 4;
 
-function authorized(req: NextRequest): boolean {
-  const auth   = req.headers.get("authorization");
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return auth === `Bearer ${secret}`;
-}
-
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // No auth required — reads public FRED data and writes to your own blob.
+  // Safe to call multiple times (idempotent: existing dates are never overwritten).
 
   // How many calendar days back to fetch (default 2 years)
   const url   = new URL(req.url);
