@@ -21,9 +21,10 @@ import type {
   GlobalSnapshot,
 } from "@/lib/types";
 
-// Revalidate every 5 minutes — data updates once daily via cron but
-// allows new KV snapshots to be picked up promptly after cron runs.
-export const revalidate = 300;
+// Always render server-side — reads fresh KV snapshots on every request.
+// KV reads are fast (<50ms), so no need for ISR caching here.
+// The KV data itself is the cache layer (refreshed once daily by cron).
+export const dynamic = "force-dynamic";
 
 // ── Key Metrics Strip ─────────────────────────────────────────────────────────
 
