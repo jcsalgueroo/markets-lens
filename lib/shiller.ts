@@ -29,22 +29,26 @@ export async function fetchShillerCapeYale(): Promise<ShillerObs[]> {
   // Parse as array-of-arrays; header:1 gives raw rows
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1 });
 
-  // Locate the header row containing "P/E10" or "CAPE"
+  // Locate the data header row: the one where column 0 is exactly "Date".
+  // (Row 6 also contains a "CAPE" label but it refers to the Excess CAPE Yield
+  //  column; row 7 is the true column-header row with Date/P/D/E/…/CAPE.)
   let headerIdx = -1;
   let capeIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const row = rows[i] as unknown[];
+    if (String(row[0] ?? "").trim() !== "Date") continue;
+    // Found the header row — now locate the CAPE / P/E10 column
     for (let j = 0; j < row.length; j++) {
       const cell = String(row[j] ?? "").trim().toUpperCase();
-      if (cell === "P/E10" || cell === "CAPE" || cell === "PE10") {
+      if (cell === "CAPE" || cell === "P/E10" || cell === "PE10") {
         headerIdx = i;
         capeIdx = j;
         break;
       }
     }
-    if (headerIdx >= 0) break;
+    break; // only one "Date" row
   }
-  if (capeIdx < 0) throw new Error("P/E10 / CAPE column not found in Shiller workbook");
+  if (capeIdx < 0) throw new Error("CAPE / P/E10 column not found in Shiller workbook");
 
   const result: ShillerObs[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
