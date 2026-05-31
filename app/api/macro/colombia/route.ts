@@ -3,6 +3,8 @@ import { fetchHistorical, computeReturn, computeYTD, sleep } from "@/lib/yahoo";
 import { fetchFredCsv } from "@/lib/fred";
 import { fetchTrmLatest } from "@/lib/datos-gov";
 
+export const maxDuration = 60;
+
 // ── Source configuration ──────────────────────────────────────────────────────
 
 const FRED_COL_10Y = "COLIRLTLT01STM"; // Colombia 10Y bond yield (OECD, monthly)

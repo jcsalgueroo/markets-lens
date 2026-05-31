@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchValuations, fetchCreditYields } from "@/lib/valuation";
 
 export const revalidate = 3600; // 1 h — valuation multiples don't move intraday
+export const maxDuration = 60;
 
 export async function GET() {
   const [equityValuations, creditYields] = await Promise.all([

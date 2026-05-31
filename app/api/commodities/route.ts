@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { fetchHistorical, computeReturn, computeYTD, sleep } from "@/lib/yahoo";
 
+export const maxDuration = 60;
+
 // ── Ticker registry ───────────────────────────────────────────────────────────
 
 type CommodityDef = {

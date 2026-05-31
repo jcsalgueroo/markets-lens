@@ -164,6 +164,7 @@ async function fetchOecdCpi(
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 export const revalidate = 3600; // 1 h
+export const maxDuration = 60;
 
 export async function GET() {
   const errors: string[] = [];

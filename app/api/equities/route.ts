@@ -161,6 +161,8 @@ function relativeReturns(a: ReturnPeriods, b: ReturnPeriods): ReturnPeriods {
 
 // ── GET handler ───────────────────────────────────────────────────────────────
 
+export const maxDuration = 60;
+
 export async function GET() {
   const results: Record<string, EquityEntry> = {};
 
