@@ -19,6 +19,7 @@ export type SnapshotKey =
   | "snapshot:commodities"
   | "snapshot:macro:colombia"
   | "snapshot:macro:global"
+  | "snapshot:valuation"
   | "snapshot:ts";
 
 export async function kvSet(key: SnapshotKey, value: unknown): Promise<void> {

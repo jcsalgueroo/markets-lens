@@ -124,6 +124,7 @@ export async function GET(req: NextRequest) {
     ["snapshot:commodities",    "/api/commodities"],
     ["snapshot:macro:colombia", "/api/macro/colombia"],
     ["snapshot:macro:global",   "/api/macro/global"],
+    ["snapshot:valuation",      "/api/valuation"],
   ];
 
   const fetched: Record<string, unknown> = {};
