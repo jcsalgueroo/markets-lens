@@ -1,5 +1,6 @@
 import { kvGet } from "@/lib/kv";
-import { fmtDate, fmtNum, fmtPct, changeColor } from "@/lib/formatters";
+import { fmtDate, fmtNum, changeColor } from "@/lib/formatters";
+import { TabNav, type TabDef } from "@/components/ui/TabNav";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { ValBadge } from "@/components/ui/ValBadge";
 import { EquityTable } from "@/components/dashboard/EquityTable";
@@ -36,8 +37,8 @@ interface MetricPillProps {
 
 function MetricPill({ label, value, change }: MetricPillProps) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800">
-      <span className="text-slate-500 text-[10px] uppercase tracking-wide whitespace-nowrap">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900 border border-slate-800 flex-shrink-0">
+      <span className="text-slate-500 text-[10px] uppercase tracking-wide">
         {label}
       </span>
       <span className="text-slate-100 text-xs font-medium tabular-nums">
@@ -45,8 +46,7 @@ function MetricPill({ label, value, change }: MetricPillProps) {
       </span>
       {change != null && (
         <span className={`text-[10px] tabular-nums ${changeColor(change)}`}>
-          {change >= 0 ? "+" : ""}
-          {change.toFixed(2)}%
+          {change >= 0 ? "+" : ""}{change.toFixed(2)}%
         </span>
       )}
     </div>
@@ -63,12 +63,12 @@ interface KeyMetricsProps {
 
 function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
   const sp500 = eq?.usBroad.find((e) => e.ticker === "^GSPC");
-  const ndx = eq?.usBroad.find((e) => e.ticker === "^NDX");
-  const tnx = fi?.treasuries.find((t) => t.ticker === "^TNX");
-  const gold = com?.metals.find((c) => c.ticker === "GC=F");
-  const wti = com?.energy.find((c) => c.ticker === "CL=F");
-  const trm = col?.trm;
-  const dxy = glb?.dxy;
+  const ndx   = eq?.usBroad.find((e) => e.ticker === "^NDX");
+  const tnx   = fi?.treasuries.find((t) => t.ticker === "^TNX");
+  const gold  = com?.metals.find((c) => c.ticker === "GC=F");
+  const wti   = com?.energy.find((c) => c.ticker === "CL=F");
+  const trm   = col?.trm;
+  const dxy   = glb?.dxy;
 
   const pills: MetricPillProps[] = [
     {
@@ -108,11 +108,120 @@ function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
   ];
 
   return (
-    <div className="flex gap-2 flex-wrap">
+    <div className="flex gap-2 overflow-x-auto px-4 md:px-6 py-4 border-b border-slate-800">
       {pills.map((p) => (
         <MetricPill key={p.label} {...p} />
       ))}
     </div>
+  );
+}
+
+// ── Tab content builders ──────────────────────────────────────────────────────
+
+function EquitiesTab({ eq }: { eq: EquitiesSnapshot | null }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Broad Markets">
+          <EquityTable rows={eq?.usBroad ?? []} />
+        </SectionCard>
+        <SectionCard title="US Factor ETFs">
+          <EquityTable rows={eq?.usFactors ?? []} />
+        </SectionCard>
+      </div>
+
+      <SectionCard title="US Sectors — vs S&P 500">
+        <SectorTable rows={eq?.usSectors ?? []} />
+      </SectionCard>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Europe (Local Currency)">
+          <EquityTable rows={eq?.europe ?? []} showCurrency />
+        </SectionCard>
+        <SectionCard title="Asia-Pacific (Local Currency)">
+          <EquityTable rows={eq?.asia ?? []} showCurrency />
+        </SectionCard>
+      </div>
+
+      <SectionCard title="Emerging Markets">
+        <EquityTable rows={eq?.em ?? []} showCurrency />
+      </SectionCard>
+    </div>
+  );
+}
+
+function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Treasuries">
+          <TreasuryTable rows={fi?.treasuries ?? []} />
+        </SectionCard>
+        <SectionCard title="Credit ETFs">
+          <CreditTable rows={fi?.creditEtfs ?? []} />
+        </SectionCard>
+      </div>
+      <SectionCard title="Yield Curve &amp; Spreads">
+        <SpreadsPanel
+          spreads={fi?.spreads ?? []}
+          curve={fi?.yieldCurve ?? []}
+        />
+      </SectionCard>
+    </div>
+  );
+}
+
+function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
+  return (
+    <SectionCard title="Commodities">
+      <CommoditiesTable
+        energy={com?.energy ?? []}
+        metals={com?.metals ?? []}
+        agriculture={com?.agriculture ?? []}
+        derived={com?.derived ?? null}
+      />
+    </SectionCard>
+  );
+}
+
+function MacroTab({
+  colombia,
+  global,
+}: {
+  colombia: ColombiaSnapshot | null;
+  global: GlobalSnapshot | null;
+}) {
+  return (
+    <div className="space-y-6">
+      <SectionCard title="Colombia — Macro &amp; Local Markets">
+        <ColombiaPanel data={colombia} />
+      </SectionCard>
+      <SectionCard title="Global Macro">
+        <GlobalMacroPanel data={global} />
+      </SectionCard>
+    </div>
+  );
+}
+
+function ValuationTab({
+  valuation,
+}: {
+  valuation: ValuationSnapshot | null;
+}) {
+  return (
+    <SectionCard
+      title="Equity Valuation &amp; Credit Yields"
+      badge={
+        valuation?.derived.marketBadge ? (
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+            Market signal:
+            <ValBadge badge={valuation.derived.marketBadge} />
+          </div>
+        ) : undefined
+      }
+    >
+      <ValuationPanel data={valuation} />
+    </SectionCard>
   );
 }
 
@@ -142,14 +251,30 @@ export default async function Dashboard() {
 
   const asOf = equities?.asOf ?? fi?.asOf ?? null;
 
+  const TABS: TabDef[] = [
+    { id: "equities",     label: "Equities",      badge: `${(equities?.usBroad.length ?? 0) + (equities?.usSectors.length ?? 0) + (equities?.usFactors.length ?? 0) + (equities?.europe.length ?? 0) + (equities?.asia.length ?? 0) + (equities?.em.length ?? 0) || ""}` || undefined },
+    { id: "fixed-income", label: "Fixed Income" },
+    { id: "commodities",  label: "Commodities" },
+    { id: "macro",        label: "Macro" },
+    { id: "valuation",    label: "Valuation" },
+  ];
+
+  const PANELS = {
+    "equities":     <EquitiesTab eq={equities} />,
+    "fixed-income": <FixedIncomeTab fi={fi} />,
+    "commodities":  <CommoditiesTab com={commodities} />,
+    "macro":        <MacroTab colombia={colombia} global={global} />,
+    "valuation":    <ValuationTab valuation={valuation} />,
+  };
+
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/90 backdrop-blur-sm">
         <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 flex-shrink-0">
             <svg
-              className="w-5 h-5 text-sky-400"
+              className="w-5 h-5 text-sky-400 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -176,110 +301,39 @@ export default async function Dashboard() {
               </>
             ) : (
               <span className="text-amber-600">
-                Awaiting first data refresh (cron runs weekdays 06:00 UTC)
+                Awaiting first data refresh — cron runs weekdays 06:00 UTC
               </span>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto px-4 md:px-6 py-6 space-y-6">
-        {/* Key metrics strip */}
-        <KeyMetricsStrip
-          eq={equities}
-          fi={fi}
-          com={commodities}
-          col={colombia}
-          glb={global}
+      {/* ── Key Metrics Strip ────────────────────────────────────────────── */}
+      <KeyMetricsStrip
+        eq={equities}
+        fi={fi}
+        com={commodities}
+        col={colombia}
+        glb={global}
+      />
+
+      {/* ── Tabbed Content ───────────────────────────────────────────────── */}
+      <div className="max-w-[1600px] mx-auto">
+        <TabNav
+          tabs={TABS}
+          panels={PANELS}
+          defaultTab="equities"
         />
+      </div>
 
-        {/* ── Equities ──────────────────────────────────────────────────────── */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard title="US Broad Markets">
-            <EquityTable rows={equities?.usBroad ?? []} />
-          </SectionCard>
-          <SectionCard title="US Factor ETFs">
-            <EquityTable rows={equities?.usFactors ?? []} />
-          </SectionCard>
-        </div>
-
-        <SectionCard title="US Sectors — vs S&P 500">
-          <SectorTable rows={equities?.usSectors ?? []} />
-        </SectionCard>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard title="Europe (Local Currency)">
-            <EquityTable rows={equities?.europe ?? []} showCurrency />
-          </SectionCard>
-          <SectionCard title="Asia-Pacific (Local Currency)">
-            <EquityTable rows={equities?.asia ?? []} showCurrency />
-          </SectionCard>
-        </div>
-
-        <SectionCard title="Emerging Markets">
-          <EquityTable rows={equities?.em ?? []} showCurrency />
-        </SectionCard>
-
-        {/* ── Fixed Income ──────────────────────────────────────────────────── */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <SectionCard title="US Treasuries">
-            <TreasuryTable rows={fi?.treasuries ?? []} />
-          </SectionCard>
-          <SectionCard title="Credit ETFs">
-            <CreditTable rows={fi?.creditEtfs ?? []} />
-          </SectionCard>
-        </div>
-
-        <SectionCard title="Yield Curve &amp; Spreads">
-          <SpreadsPanel
-            spreads={fi?.spreads ?? []}
-            curve={fi?.yieldCurve ?? []}
-          />
-        </SectionCard>
-
-        {/* ── Commodities ───────────────────────────────────────────────────── */}
-        <SectionCard title="Commodities">
-          <CommoditiesTable
-            energy={commodities?.energy ?? []}
-            metals={commodities?.metals ?? []}
-            agriculture={commodities?.agriculture ?? []}
-            derived={commodities?.derived ?? null}
-          />
-        </SectionCard>
-
-        {/* ── Valuation ─────────────────────────────────────────────────────── */}
-        <SectionCard
-          title="Equity Valuation &amp; Credit Yields"
-          badge={
-            valuation?.derived.marketBadge ? (
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                Market signal:
-                <ValBadge badge={valuation.derived.marketBadge} />
-              </div>
-            ) : undefined
-          }
-        >
-          <ValuationPanel data={valuation} />
-        </SectionCard>
-
-        {/* ── Colombia Macro ────────────────────────────────────────────────── */}
-        <SectionCard title="Colombia — Macro &amp; Local Markets">
-          <ColombiaPanel data={colombia} />
-        </SectionCard>
-
-        {/* ── Global Macro ──────────────────────────────────────────────────── */}
-        <SectionCard title="Global Macro">
-          <GlobalMacroPanel data={global} />
-        </SectionCard>
-      </main>
-
-      <footer className="border-t border-slate-800 mt-12">
+      {/* ── Footer ──────────────────────────────────────────────────────── */}
+      <footer className="border-t border-slate-800 mt-6">
         <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
           <p className="text-slate-700 text-[10px]">
             MarketLens · Data: Yahoo Finance, FRED, ECB SDMX, datos.gov.co
           </p>
           <p className="text-slate-700 text-[10px]">
-            Cron: Mon–Fri 06:00 UTC · History: Sundays 05:00 UTC
+            Snapshots: Mon–Fri 06:00 UTC · History: Sundays 05:00 UTC
           </p>
         </div>
       </footer>
