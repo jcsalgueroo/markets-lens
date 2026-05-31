@@ -15,6 +15,8 @@ import { GlobalMacroPanel } from "@/components/dashboard/GlobalMacroPanel";
 import { IndexHistoryChart } from "@/components/charts/IndexHistoryChart";
 import { SectorBarChart } from "@/components/charts/SectorBarChart";
 import { YieldHistoryChart } from "@/components/charts/YieldHistoryChart";
+import { CommoditiesHistoryChart } from "@/components/charts/CommoditiesHistoryChart";
+import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
 
 import type {
   EquitiesSnapshot,
@@ -200,14 +202,19 @@ function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
 
 function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
   return (
-    <SectionCard title="Commodities">
-      <CommoditiesTable
-        energy={com?.energy ?? []}
-        metals={com?.metals ?? []}
-        agriculture={com?.agriculture ?? []}
-        derived={com?.derived ?? null}
-      />
-    </SectionCard>
+    <div className="space-y-6">
+      <SectionCard title="Commodities — Normalized Price History">
+        <CommoditiesHistoryChart defaultTimeframe="1Y" />
+      </SectionCard>
+      <SectionCard title="Commodities">
+        <CommoditiesTable
+          energy={com?.energy ?? []}
+          metals={com?.metals ?? []}
+          agriculture={com?.agriculture ?? []}
+          derived={com?.derived ?? null}
+        />
+      </SectionCard>
+    </div>
   );
 }
 
@@ -220,6 +227,16 @@ function MacroTab({
 }) {
   return (
     <div className="space-y-6">
+      {/* Colombia charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="TRM — USD/COP Exchange Rate">
+          <TRMHistoryChart series={["USDCOP"]} defaultTimeframe="1Y" height={220} />
+        </SectionCard>
+        <SectionCard title="Oil Price in Colombian Pesos">
+          <TRMHistoryChart series={["OilCOP"]} defaultTimeframe="1Y" height={220} />
+        </SectionCard>
+      </div>
+
       <SectionCard title="Colombia — Macro &amp; Local Markets">
         <ColombiaPanel data={colombia} />
       </SectionCard>
