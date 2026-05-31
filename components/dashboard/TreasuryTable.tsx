@@ -29,7 +29,7 @@ export function TreasuryTable({ rows }: { rows: TreasuryEntry[] }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full min-w-[560px]">
         <thead>
           <tr className="border-b border-slate-800">
             <th className={THL}>Instrument</th>

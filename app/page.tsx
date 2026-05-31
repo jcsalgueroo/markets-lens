@@ -12,6 +12,7 @@ import { CommoditiesTable } from "@/components/dashboard/CommoditiesTable";
 import { ValuationPanel } from "@/components/dashboard/ValuationPanel";
 import { ColombiaPanel } from "@/components/dashboard/ColombiaPanel";
 import { GlobalMacroPanel } from "@/components/dashboard/GlobalMacroPanel";
+import { SignalsBar } from "@/components/dashboard/SignalsBar";
 import { IndexHistoryChart } from "@/components/charts/IndexHistoryChart";
 import { SectorBarChart } from "@/components/charts/SectorBarChart";
 import { YieldHistoryChart } from "@/components/charts/YieldHistoryChart";
@@ -467,6 +468,9 @@ export default async function Dashboard() {
         col={colombia}
         glb={global}
       />
+
+      {/* ── Market Regime Signals ────────────────────────────────────────── */}
+      <SignalsBar eq={equities} fi={fi} col={colombia} glb={global} />
 
       {/* ── Tabbed Content ───────────────────────────────────────────────── */}
       <div className="max-w-[1600px] mx-auto">

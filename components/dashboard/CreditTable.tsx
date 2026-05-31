@@ -85,7 +85,7 @@ export function CreditTable({ rows }: { rows: CreditEntry[] }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full min-w-[640px]">
         <thead>
           <tr className="border-b border-slate-800">
             <th className="text-[10px] font-medium text-slate-500 uppercase tracking-wider text-left pb-2 pl-5 pr-2">
