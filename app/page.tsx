@@ -479,13 +479,29 @@ export default async function Dashboard() {
 
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800 mt-6">
-        <div className="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
-          <p className="text-slate-700 text-[10px]">
-            MarketLens · Data: Yahoo Finance, FRED, ECB SDMX, datos.gov.co
+        <div className="max-w-[1600px] mx-auto px-6 py-4 space-y-2">
+          {/* FRED® required attribution */}
+          <p className="text-slate-600 text-[10px] leading-relaxed">
+            This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
+            By using this application you agree to be bound by the{" "}
+            <a
+              href="https://fred.stlouisfed.org/docs/api/terms_of_use.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-slate-400 transition-colors"
+            >
+              FRED® API Terms of Use
+            </a>
+            .
           </p>
-          <p className="text-slate-700 text-[10px]">
-            Snapshots: Mon–Fri 06:00 UTC · History: Sundays 05:00 UTC
-          </p>
+          <div className="flex flex-wrap gap-4 items-center justify-between">
+            <p className="text-slate-700 text-[10px]">
+              MarketLens · Data: Yahoo Finance, FRED®, ECB SDMX, datos.gov.co
+            </p>
+            <p className="text-slate-700 text-[10px]">
+              Snapshots: Mon–Fri 06:00 UTC · History: Sundays 05:00 UTC
+            </p>
+          </div>
         </div>
       </footer>
     </div>
