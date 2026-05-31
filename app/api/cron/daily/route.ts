@@ -21,6 +21,9 @@ async function fetchJson(url: string): Promise<unknown> {
   const protocol = host.startsWith("localhost") ? "http" : "https";
   const res = await fetch(`${protocol}://${host}${url}`, {
     signal: AbortSignal.timeout(55_000),
+    // Bypass Vercel's CDN / ISR cache so the cron always gets a fresh
+    // response from each API route, even for routes with revalidate = 3600.
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
   return res.json();

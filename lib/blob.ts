@@ -26,7 +26,10 @@ export interface HistoryBlob {
   series: HistorySeries;
 }
 
-const MAX_POINTS = 265; // ~1 year of trading days
+// 1 200 points covers ~3 years of daily FRED/Yahoo data (750 trading days)
+// plus ample buffer for gaps and weekend entries.  Monthly series (CAPE,
+// CPI, etc.) will only have ~36 points for 3 Y anyway, so the cap never bites.
+const MAX_POINTS = 1_200;
 
 function trim(arr: HistoryPoint[]): HistoryPoint[] {
   return arr.slice(-MAX_POINTS);
@@ -47,8 +50,12 @@ export async function blobWriteHistory(
       Object.entries(series).map(([k, v]) => [k, trim(v)])
     ),
   };
+  // Public access: history blobs contain non-sensitive public market data
+  // (FRED macro series, Yahoo Finance prices).  Public blobs are directly
+  // fetchable by URL without a signed token, which is required for the
+  // server-side blobReadHistory fetch to work correctly.
   const blob = await put(`history/${dataset}.json`, JSON.stringify(payload), {
-    access: "private",
+    access: "public",
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
