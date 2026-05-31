@@ -112,12 +112,23 @@ function extractCommodityHistory(data: unknown): HistorySeries {
   return series;
 }
 
+// Colombia route stores rate histories as { date, rate } (not { date, value }).
+// Remap before passing to toSeries so the shape matches HistoryPoint.
+function rateToValue(arr: unknown): HistoryPoint[] {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((p): p is { date: string; rate?: number; value?: number } =>
+      p && typeof p.date === "string" && (typeof p.value === "number" || typeof p.rate === "number")
+    )
+    .map((p) => ({ date: p.date, value: (p.value ?? p.rate)! }));
+}
+
 function extractColombiaHistory(data: unknown): HistorySeries {
   const d = data as Record<string, unknown>;
   return {
-    "USDCOP": toSeries((d.trm as Record<string, unknown>)?.history),
-    "TES10Y": toSeries((d.tes10y as Record<string, unknown>)?.history),
-    "IBR":    toSeries((d.ibrRate as Record<string, unknown>)?.history),
+    "USDCOP": rateToValue((d.trm as Record<string, unknown>)?.history),
+    "TES10Y": rateToValue((d.tes10y as Record<string, unknown>)?.history),
+    "IBR":    rateToValue((d.ibrRate as Record<string, unknown>)?.history),
     "OilCOP": toSeries((d.oilInCop as Record<string, unknown>)?.history),
   };
 }
