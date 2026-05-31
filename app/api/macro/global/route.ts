@@ -196,12 +196,19 @@ type SafeFredReturn = {
   error?: string;
 };
 
+const CAPE_STALE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
 async function fetchCape(): Promise<SafeFredReturn> {
-  // Try FRED first — it carries the CAPE series when available
+  // Try FRED first — it carried the CAPE series until ~2023 when it was removed.
+  // Guard against stale Next.js data-cache responses: if the latest observation is
+  // more than 90 days old the series is effectively gone and we skip to Yale.
   const fredResult = await safeFred("CAPE");
-  if (fredResult.status === "ok" && fredResult.history.length > 0) {
-    return fredResult;
-  }
+  const fredIsFresh =
+    fredResult.status === "ok" &&
+    fredResult.history.length > 0 &&
+    fredResult.date != null &&
+    Date.now() - new Date(fredResult.date).getTime() < CAPE_STALE_MS;
+  if (fredIsFresh) return fredResult;
 
   // FRED returned empty or errored — fall back to Robert Shiller's Yale dataset
   try {
