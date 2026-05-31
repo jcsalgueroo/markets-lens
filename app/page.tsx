@@ -21,6 +21,7 @@ import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
 import { GlobalMacroChart } from "@/components/charts/GlobalMacroChart";
 import { YieldCurveChart } from "@/components/charts/YieldCurveChart";
 import { PrintButton } from "@/components/ui/PrintButton";
+import { StalenessAlert } from "@/components/ui/StalenessAlert";
 
 import type {
   EquitiesSnapshot,
@@ -459,6 +460,9 @@ export default async function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* ── Staleness alert (client-side, weekdays only) ─────────────────── */}
+      <StalenessAlert asOf={asOf} />
 
       {/* ── Key Metrics Strip ────────────────────────────────────────────── */}
       <KeyMetricsStrip
