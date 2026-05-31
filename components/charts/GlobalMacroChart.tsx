@@ -29,12 +29,23 @@ export interface MacroSeriesDef {
   format?: "pct" | "index" | "ratio";
 }
 
+export interface RefLine {
+  y: number;
+  label: string;
+  color: string;
+  dashed?: boolean;
+}
+
 interface Props {
   seriesDefs: MacroSeriesDef[];
   defaultTimeframe?: TimeframeLabel;
   height?: number;
-  /** Reference line — e.g. y=0 for real yields */
+  /** Reference line at y=0 */
   zeroLine?: boolean;
+  /** Additional custom reference lines */
+  referenceLines?: RefLine[];
+  /** Footer note below the chart */
+  note?: string;
 }
 
 const TICK_INTERVAL: Record<TimeframeLabel, number> = {
@@ -56,6 +67,8 @@ export function GlobalMacroChart({
   defaultTimeframe = "3Y",
   height = 240,
   zeroLine = false,
+  referenceLines = [],
+  note,
 }: Props) {
   const [tf, setTf] = useState<TimeframeLabel>(defaultTimeframe);
   const { data, state } = useHistoryData("macro-global");
@@ -144,6 +157,22 @@ export function GlobalMacroChart({
             width={48}
           />
           {zeroLine && <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 3" />}
+          {referenceLines.map((rl) => (
+            <ReferenceLine
+              key={rl.y}
+              y={rl.y}
+              stroke={rl.color}
+              strokeDasharray={rl.dashed !== false ? "4 3" : undefined}
+              strokeOpacity={0.7}
+              label={{
+                value: rl.label,
+                position: "insideTopRight",
+                fontSize: 8,
+                fill: rl.color,
+                opacity: 0.8,
+              }}
+            />
+          ))}
           <Tooltip
             contentStyle={{
               background: "#0f172a",
@@ -185,6 +214,9 @@ export function GlobalMacroChart({
           ))}
         </LineChart>
       </ResponsiveContainer>
+      {note && (
+        <p className="text-[9px] text-slate-700 px-2 pt-1">{note}</p>
+      )}
     </div>
   );
 }

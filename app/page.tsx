@@ -229,6 +229,24 @@ function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
   );
 }
 
+// ── Valuation chart series definitions ────────────────────────────────────────
+
+const CAPE_SERIES = [
+  { id: "CAPE", label: "Shiller CAPE", color: "#a78bfa", format: "ratio" as const },
+];
+
+// Shiller CAPE long-run average: ~16.8× (1881–present).
+// "Fair value" upper bound: ~25× (one std dev above mean).
+const CAPE_REFERENCE_LINES = [
+  { y: 16.8, label: "Hist. avg  16.8×", color: "#34d399", dashed: true },
+  { y: 25,   label: "Rich  25×",         color: "#fbbf24", dashed: true },
+];
+
+const REAL_YIELD_VALUATION_SERIES = [
+  { id: "DFII10", label: "Real 10Y Yield",      color: "#38bdf8", format: "pct" as const },
+  { id: "T10YIE", label: "10Y Breakeven Infl.", color: "#fb923c", format: "pct" as const },
+];
+
 // ── Global macro series definitions ───────────────────────────────────────────
 
 const RATE_CYCLE_SERIES = [
@@ -295,19 +313,44 @@ function ValuationTab({
   valuation: ValuationSnapshot | null;
 }) {
   return (
-    <SectionCard
-      title="Equity Valuation &amp; Credit Yields"
-      badge={
-        valuation?.derived.marketBadge ? (
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-            Market signal:
-            <ValBadge badge={valuation.derived.marketBadge} />
-          </div>
-        ) : undefined
-      }
-    >
-      <ValuationPanel data={valuation} />
-    </SectionCard>
+    <div className="space-y-6">
+      {/* Historical context charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Shiller CAPE — Historical Valuation">
+          <GlobalMacroChart
+            seriesDefs={CAPE_SERIES}
+            defaultTimeframe="3Y"
+            height={240}
+            referenceLines={CAPE_REFERENCE_LINES}
+            note="Shiller Cyclically Adjusted P/E · monthly · source: FRED / Robert Shiller"
+          />
+        </SectionCard>
+        <SectionCard title="Real Yields &amp; Breakeven Inflation">
+          <GlobalMacroChart
+            seriesDefs={REAL_YIELD_VALUATION_SERIES}
+            defaultTimeframe="3Y"
+            height={240}
+            zeroLine
+            note="Rising real yields compress equity multiples — the discount rate effect"
+          />
+        </SectionCard>
+      </div>
+
+      {/* Current snapshot */}
+      <SectionCard
+        title="Equity Valuation &amp; Credit Yields"
+        badge={
+          valuation?.derived.marketBadge ? (
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+              Market signal:
+              <ValBadge badge={valuation.derived.marketBadge} />
+            </div>
+          ) : undefined
+        }
+      >
+        <ValuationPanel data={valuation} />
+      </SectionCard>
+    </div>
   );
 }
 
