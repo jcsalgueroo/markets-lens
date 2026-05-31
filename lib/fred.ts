@@ -49,6 +49,7 @@ async function fetchFredApi(seriesId: string): Promise<FredObservation[]> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(12_000),
     headers: { "User-Agent": "MarketLens/1.0" },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`FRED API ${seriesId}: HTTP ${res.status}`);
 
@@ -70,6 +71,7 @@ async function fetchFredCsvRaw(seriesId: string): Promise<FredObservation[]> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(10_000),
     headers: { "User-Agent": "MarketLens/1.0" },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`FRED CSV ${seriesId}: HTTP ${res.status}`);
   const text = await res.text();

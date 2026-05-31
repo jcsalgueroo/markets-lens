@@ -15,6 +15,7 @@ export async function fetchShillerCapeYale(): Promise<ShillerObs[]> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(20_000),
     headers: { "User-Agent": "MarketLens/1.0" },
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`Yale Shiller XLS HTTP ${res.status}`);
 
