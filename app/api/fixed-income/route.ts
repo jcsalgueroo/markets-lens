@@ -223,11 +223,18 @@ export async function GET() {
   })();
 
   const FRED_TENORS = [
+    // withHistory:true → full 3Y daily series stored in fredTenors for the cron to extract.
+    // Yahoo Finance (^IRX/^FVX/^TNX/^TYX) sometimes returns stale/gapped history;
+    // FRED DGS series are the authoritative daily source for all tenors.
+    { seriesId: "DGS3MO", tenor: "3M",  withHistory: true  }, // replaces ^IRX history
     { seriesId: "DGS6MO", tenor: "6M",  withHistory: false },
     { seriesId: "DGS1",   tenor: "1Y",  withHistory: false },
-    { seriesId: "DGS2",   tenor: "2Y",  withHistory: true  }, // full 3Y history for charts
+    { seriesId: "DGS2",   tenor: "2Y",  withHistory: true  }, // existing
+    { seriesId: "DGS5",   tenor: "5Y",  withHistory: true  }, // replaces ^FVX history
     { seriesId: "DGS7",   tenor: "7Y",  withHistory: false },
+    { seriesId: "DGS10",  tenor: "10Y", withHistory: true  }, // replaces ^TNX history
     { seriesId: "DGS20",  tenor: "20Y", withHistory: false },
+    { seriesId: "DGS30",  tenor: "30Y", withHistory: true  }, // replaces ^TYX history
   ] as const;
 
   type FredTenorKey = typeof FRED_TENORS[number]["tenor"];
@@ -262,8 +269,13 @@ export async function GET() {
 
   // ── Complete 9-point yield curve (ordered by maturity) ────────────────────
   const TENOR_ORDER = ["3M", "6M", "1Y", "2Y", "5Y", "7Y", "10Y", "20Y", "30Y"] as const;
+  // Yahoo Finance preferred for current yields (fresher intra-day);
+  // FRED DGS used as fallback when Yahoo fails
   const yieldByTenor: Record<string, number | null> = {
-    "3M": irx, "5Y": fvx, "10Y": tnx, "30Y": tyx,
+    "3M":  irx ?? fredData["3M"]?.yield  ?? null,
+    "5Y":  fvx ?? fredData["5Y"]?.yield  ?? null,
+    "10Y": tnx ?? fredData["10Y"]?.yield ?? null,
+    "30Y": tyx ?? fredData["30Y"]?.yield ?? null,
     "6M":  fredData["6M"]?.yield  ?? null,
     "1Y":  fredData["1Y"]?.yield  ?? null,
     "2Y":  dgs2,

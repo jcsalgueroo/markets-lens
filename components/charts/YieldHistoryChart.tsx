@@ -162,7 +162,7 @@ export function YieldHistoryChart({ defaultTimeframe = "1Y" }: { defaultTimefram
         </LineChart>
       </ResponsiveContainer>
       <p className="text-[9px] text-slate-700 px-2 pt-1">
-        Yield level in % · 3M/5Y/10Y/30Y: Yahoo Finance · 2Y: FRED DGS2 (daily)
+        Yield level in % · All tenors: FRED DGS series (daily) · current levels: Yahoo Finance
       </p>
     </div>
   );

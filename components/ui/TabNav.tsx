@@ -37,7 +37,7 @@ export function TabNav({ tabs, panels, defaultTab }: TabNavProps) {
   return (
     <div>
       {/* Tab bar — hidden in print */}
-      <div className="flex gap-1 border-b border-slate-800 px-4 md:px-6 overflow-x-auto print:hidden">
+      <div className="flex gap-1 border-b border-slate-800 px-4 md:px-6 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden print:hidden">
         {tabs.map((tab, idx) => {
           const isActive = tab.id === active;
           return (

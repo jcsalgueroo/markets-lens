@@ -55,11 +55,27 @@ function extractFixedIncomeHistory(data: unknown): HistorySeries {
     }
   }
 
-  // FRED 2Y Treasury history (DGS2) — stored in fredTenors["2Y"].history
+  // FRED treasury history — use for all tenors (FRED DGS is the authoritative
+  // daily source; Yahoo Finance ^IRX/^FVX/^TNX/^TYX sometimes has data gaps).
+  // Store under the original Yahoo ticker keys for chart series-ID compatibility.
   const fredTenors = (d.fredTenors as Record<string, { yield: number | null; history: { date: string; yield: number }[] }>) ?? {};
+
+  // 2Y: always from FRED DGS2 (no Yahoo equivalent), keyed "DGS2"
   const dgs2History = fredTenors["2Y"]?.history ?? [];
   if (dgs2History.length > 0) {
     series["DGS2"] = dgs2History.map((p) => ({ date: p.date, value: p.yield }));
+  }
+
+  // 3M/5Y/10Y/30Y: FRED history overrides Yahoo when available
+  const fredOverrides: Record<string, string> = {
+    "3M": "^IRX", "5Y": "^FVX", "10Y": "^TNX", "30Y": "^TYX",
+  };
+  for (const [tenor, yahooKey] of Object.entries(fredOverrides)) {
+    const hist = fredTenors[tenor]?.history ?? [];
+    if (hist.length > 0) {
+      series[yahooKey] = hist.map((p) => ({ date: p.date, value: p.yield }));
+    }
+    // else: Yahoo Finance history already stored above — keep it as fallback
   }
 
   // FRED OAS credit spreads — stored in oasData.hyOas.history / igOas.history

@@ -73,13 +73,16 @@ interface KeyMetricsProps {
 }
 
 function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
-  const sp500 = eq?.usBroad.find((e) => e.ticker === "^GSPC");
-  const ndx   = eq?.usBroad.find((e) => e.ticker === "^NDX");
-  const tnx   = fi?.treasuries.find((t) => t.ticker === "^TNX");
-  const gold  = com?.metals.find((c) => c.ticker === "GC=F");
-  const wti   = com?.energy.find((c) => c.ticker === "CL=F");
-  const trm   = col?.trm;
-  const dxy   = glb?.dxy;
+  const sp500   = eq?.usBroad.find((e) => e.ticker === "^GSPC");
+  const ndx     = eq?.usBroad.find((e) => e.ticker === "^NDX");
+  const stoxx   = eq?.europe.find((e) => e.ticker === "^STOXX");
+  const icolcap = eq?.em.find((e) => e.ticker === "ICOLCAP.CL");
+  const tnx     = fi?.treasuries.find((t) => t.ticker === "^TNX");
+  const gold    = com?.metals.find((c) => c.ticker === "GC=F");
+  const brent   = com?.energy.find((c) => c.ticker === "BZ=F");
+  const wti     = com?.energy.find((c) => c.ticker === "CL=F");
+  const trm     = col?.trm;
+  const dxy     = glb?.dxy;
 
   const pills: MetricPillProps[] = [
     {
@@ -93,6 +96,11 @@ function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
       change: ndx?.returns["1D"] ?? null,
     },
     {
+      label: "STOXX 600",
+      value: stoxx?.price != null ? fmtNum(stoxx.price, 2) : "—",
+      change: stoxx?.returns["1D"] ?? null,
+    },
+    {
       label: "10Y Yield",
       value: tnx?.yieldLevel != null ? `${tnx.yieldLevel.toFixed(3)}%` : "—",
     },
@@ -102,9 +110,19 @@ function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
       change: gold?.returns["1D"] ?? null,
     },
     {
+      label: "Brent",
+      value: brent?.priceUsd != null ? `$${fmtNum(brent.priceUsd, 2)}` : "—",
+      change: brent?.returns["1D"] ?? null,
+    },
+    {
       label: "WTI",
       value: wti?.priceUsd != null ? `$${fmtNum(wti.priceUsd, 2)}` : "—",
       change: wti?.returns["1D"] ?? null,
+    },
+    {
+      label: "ICOLCAP",
+      value: icolcap?.price != null ? fmtNum(icolcap.price, 2) : "—",
+      change: icolcap?.returns["1D"] ?? null,
     },
     {
       label: "TRM COP/USD",
@@ -600,6 +618,9 @@ export default async function Dashboard() {
               Snapshots: Mon–Fri 06:00 UTC · History: Sundays 05:00 UTC
             </p>
           </div>
+          <p className="text-slate-800 text-[10px]">
+            © {new Date().getFullYear()} Juan Camilo Salguero
+          </p>
         </div>
       </footer>
     </div>
