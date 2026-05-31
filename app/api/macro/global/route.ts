@@ -234,7 +234,7 @@ async function fetchCape(): Promise<SafeFredReturn> {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
-export const dynamic = "force-dynamic"; // always run live — called only by cron, not browser
+export const revalidate = 3600; // ISR: pre-rendered at build, refreshed hourly
 export const maxDuration = 60;
 
 export async function GET() {
