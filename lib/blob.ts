@@ -48,7 +48,7 @@ export async function blobWriteHistory(
     ),
   };
   const blob = await put(`history/${dataset}.json`, JSON.stringify(payload), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
   });
