@@ -29,6 +29,16 @@ interface FredApiResponse {
 
 async function fetchFredApi(seriesId: string): Promise<FredObservation[]> {
   const key = process.env.FRED_API_KEY!; // only called when key is set
+
+  // FRED requires exactly 32 lowercase alphanumeric characters.
+  // Catch format errors early so they appear in logs immediately.
+  if (!/^[a-z0-9]{32}$/.test(key)) {
+    throw new Error(
+      `FRED_API_KEY has invalid format (got "${key.slice(0, 6)}…" len=${key.length}). ` +
+      `Must be 32 lowercase alphanumeric chars — check Vercel env vars.`
+    );
+  }
+
   const url =
     `https://api.stlouisfed.org/fred/series/observations` +
     `?series_id=${encodeURIComponent(seriesId)}` +
