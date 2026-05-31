@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "PowerShell(if \\(-not $?\\) { \"Directory does not exist or is empty\" })",
-      "PowerShell($content = Get-Content \"C:\\\\Users\\\\jcsal\\\\.claude\\\\projects\\\\C--Users-jcsal-OneDrive-Desktop-markets-lens\\\\d3e49415-d0d8-40e3-bfa8-95feb75c5828\\\\tool-results\\\\bzgcqbkt3.txt\" -Raw; $json = $content | ConvertFrom-Json; $json.eurArea | ConvertTo-Json -Depth 4)"
+      "PowerShell($content = Get-Content \"C:\\\\Users\\\\jcsal\\\\.claude\\\\projects\\\\C--Users-jcsal-OneDrive-Desktop-markets-lens\\\\d3e49415-d0d8-40e3-bfa8-95feb75c5828\\\\tool-results\\\\bzgcqbkt3.txt\" -Raw; $json = $content | ConvertFrom-Json; $json.eurArea | ConvertTo-Json -Depth 4)",
+      "PowerShell(if \\(-not $?\\) { \"no vercel.json\" })",
+      "WebFetch(domain:markets-lens.vercel.app)",
+      "Bash(npx tsc *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(ls .env*)",
+      "Bash(cat vercel.json)",
+      "Bash(node -e \"const {list} = require\\('@vercel/blob'\\); console.log\\(list.toString\\(\\).slice\\(0,200\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

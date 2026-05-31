@@ -31,6 +31,7 @@ const TICK_INTERVAL: Record<TimeframeLabel, number> = {
   "1M":  0,
   "3M":  1,
   "6M":  3,
+  "YTD": 3,
   "1Y":  7,
   "3Y":  12,
 };

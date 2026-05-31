@@ -22,10 +22,11 @@ import {
 } from "./useHistoryData";
 
 const COMMODITY_SERIES = [
-  { id: "GC=F", label: "Gold",   color: "#fbbf24" }, // amber
-  { id: "CL=F", label: "WTI",    color: "#38bdf8" }, // sky
-  { id: "HG=F", label: "Copper", color: "#fb923c" }, // orange
-  { id: "BZ=F", label: "Brent",  color: "#a78bfa" }, // violet
+  { id: "GC=F", label: "Gold",        color: "#fbbf24" }, // amber
+  { id: "CL=F", label: "WTI",         color: "#38bdf8" }, // sky
+  { id: "HG=F", label: "Copper",      color: "#fb923c" }, // orange
+  { id: "BZ=F", label: "Brent",       color: "#a78bfa" }, // violet
+  { id: "DBA",  label: "Agriculture", color: "#86efac" }, // green
 ];
 
 const TICK_INTERVAL: Record<TimeframeLabel, number> = {
@@ -33,6 +34,7 @@ const TICK_INTERVAL: Record<TimeframeLabel, number> = {
   "3M":  1,
   "6M":  3,
   "1Y":  7,
+  "YTD": 3,
   "3Y":  12,
 };
 

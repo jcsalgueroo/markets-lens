@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -10,56 +11,114 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
-import type { EquityEntry } from "@/lib/types";
-
-interface Props {
-  rows: EquityEntry[];
-}
+import type { EquityEntry, EquityReturns } from "@/lib/types";
 
 // Short sector names for the chart axis
 const SHORT_NAMES: Record<string, string> = {
   "Information Technology": "Info Tech",
   "Consumer Discretionary": "Cons Disc",
   "Communication Services": "Comm Svcs",
-  "Consumer Staples": "Cons Stpls",
-  "Health Care": "Health Care",
-  "Financials": "Financials",
-  "Industrials": "Industrials",
-  "Real Estate": "Real Estate",
-  "Utilities": "Utilities",
-  "Materials": "Materials",
-  "Energy": "Energy",
+  "Consumer Staples":       "Cons Stpls",
+  "Health Care":            "Health Care",
+  "Financials":             "Financials",
+  "Industrials":            "Industrials",
+  "Real Estate":            "Real Estate",
+  "Utilities":              "Utilities",
+  "Materials":              "Materials",
+  "Energy":                 "Energy",
 };
 
-export function SectorBarChart({ rows }: Props) {
-  const data = rows
-    .filter((r) => r.returns.YTD != null && r.dataStatus !== "error")
-    .map((r) => ({
-      name: SHORT_NAMES[r.label] ?? r.label,
-      ytd: +(r.returns.YTD!.toFixed(2)),
-    }))
-    .sort((a, b) => b.ytd - a.ytd);
+// EquityReturns only has 1D, 1W, 1M, YTD — subset of what we want to show.
+type Period = keyof EquityReturns;  // "1D" | "1W" | "1M" | "YTD"
+type Mode   = "abs" | "rel";
+
+const PERIODS: Period[] = ["1W", "1M", "YTD"];
+
+interface Props {
+  rows: EquityEntry[];
+  /** S&P 500 row for relative-mode benchmark */
+  spRow?: EquityEntry | null;
+}
+
+export function SectorBarChart({ rows, spRow }: Props) {
+  const [period, setPeriod] = useState<Period>("YTD");
+  const [mode,   setMode]   = useState<Mode>("rel");
+
+  const data = useMemo(() => {
+    const spBenchmark = spRow?.returns[period] ?? null;
+
+    return rows
+      .filter((r) => r.returns[period] != null && r.dataStatus !== "error")
+      .map((r) => {
+        const raw    = r.returns[period]!;
+        const value  = mode === "rel" && spBenchmark != null
+          ? parseFloat((raw - spBenchmark).toFixed(2))
+          : parseFloat(raw.toFixed(2));
+        return {
+          name:  SHORT_NAMES[r.label] ?? r.label,
+          value,
+        };
+      })
+      .sort((a, b) => b.value - a.value);
+  }, [rows, period, mode, spRow]);
 
   if (data.length === 0) {
     return (
-      <div className="h-[320px] flex items-center justify-center p-4">
-        <p className="text-slate-600 text-xs text-center">
-          Awaiting data refresh
-        </p>
+      <div className="h-[340px] flex items-center justify-center p-4">
+        <p className="text-slate-600 text-xs text-center">Awaiting data refresh</p>
       </div>
     );
   }
 
+  const modeLabel = mode === "rel" ? "vs S&P 500" : "Absolute";
+
   return (
     <div className="p-4">
-      <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-3">
-        Sector YTD Returns (vs S&amp;P 500)
+      {/* Controls */}
+      <div className="flex items-center justify-between mb-3 print:hidden">
+        {/* Period toggles */}
+        <div className="flex gap-1">
+          {PERIODS.map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className={`px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                period === p
+                  ? "bg-sky-500/20 text-sky-400 ring-1 ring-sky-500/30"
+                  : "text-slate-600 hover:text-slate-400"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        {/* Absolute / vs S&P toggle */}
+        <div className="flex gap-1">
+          {(["abs", "rel"] as Mode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-2 py-0.5 text-[10px] rounded font-medium transition-colors ${
+                mode === m
+                  ? "bg-slate-700 text-slate-200 ring-1 ring-slate-600"
+                  : "text-slate-600 hover:text-slate-400"
+              }`}
+            >
+              {m === "abs" ? "Absolute" : "vs S&P 500"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-2">
+        Sector {period} Returns — {modeLabel}
       </p>
+
       <ResponsiveContainer width="100%" height={320}>
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 0, right: 40, bottom: 0, left: 4 }}
+          margin={{ top: 0, right: 44, bottom: 0, left: 4 }}
         >
           <XAxis
             type="number"
@@ -86,16 +145,19 @@ export function SectorBarChart({ rows }: Props) {
             labelStyle={{ color: "#94a3b8" }}
             formatter={(value: unknown) => {
               const v = value as number;
-              return [`${v >= 0 ? "+" : ""}${v.toFixed(2)}%`, "YTD"];
+              return [
+                `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`,
+                `${period} (${modeLabel})`,
+              ];
             }}
             cursor={{ fill: "#1e293b" }}
           />
           <ReferenceLine x={0} stroke="#334155" />
-          <Bar dataKey="ytd" radius={[0, 3, 3, 0]} maxBarSize={16}>
+          <Bar dataKey="value" radius={[0, 3, 3, 0]} maxBarSize={16}>
             {data.map((entry) => (
               <Cell
                 key={entry.name}
-                fill={entry.ytd >= 0 ? "#34d399" : "#f87171"}
+                fill={entry.value >= 0 ? "#34d399" : "#f87171"}
                 fillOpacity={0.85}
               />
             ))}

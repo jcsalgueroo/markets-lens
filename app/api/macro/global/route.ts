@@ -161,6 +161,30 @@ async function fetchOecdCpi(
   }
 }
 
+// ── YoY helper ────────────────────────────────────────────────────────────────
+// Converts a raw index series (CPIAUCSL ~332, PCEPILFE ~129, GDP ~$32T) into
+// year-over-year percent changes.  lookback=12 for monthly, 4 for quarterly.
+
+type SafeFredResult = Awaited<ReturnType<typeof safeFred>>;
+
+function toYoY(raw: SafeFredResult, lookback = 12): SafeFredResult {
+  if (raw.status === "error") return raw;
+  const hist = raw.history;
+  const yoyHist: { date: string; value: number }[] = [];
+  for (let i = lookback; i < hist.length; i++) {
+    const cur  = hist[i];
+    const prev = hist[i - lookback];
+    if (cur && prev && prev.value > 0) {
+      yoyHist.push({
+        date:  cur.date,
+        value: parseFloat(((cur.value / prev.value - 1) * 100).toFixed(3)),
+      });
+    }
+  }
+  const latest = yoyHist.at(-1);
+  return { value: latest?.value ?? null, date: latest?.date ?? null, history: yoyHist, status: "ok" };
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 export const revalidate = 3600; // 1 h
@@ -170,7 +194,7 @@ export async function GET() {
   const errors: string[] = [];
 
   // ── US macro (FRED public CSV) ────────────────────────────────────────────
-  const [cpi, pce, gdp, unrate, fedFunds, t10yie, dfii10, cape] =
+  const [cpiRaw, pceRaw, gdpRaw, unrate, fedFunds, t10yie, dfii10, cape] =
     await Promise.all([
       safeFred("CPIAUCSL"),
       safeFred("PCEPILFE"),
@@ -181,6 +205,11 @@ export async function GET() {
       safeFred("DFII10", { thinned: true }),
       safeFred("CAPE"),
     ]);
+
+  // Convert index levels → YoY % changes
+  const cpi  = toYoY(cpiRaw,  12);  // monthly → 12-month lookback
+  const pce  = toYoY(pceRaw,  12);
+  const gdp  = toYoY(gdpRaw,   4);  // quarterly → 4-quarter lookback
 
   for (const [label, r] of [
     ["CPIAUCSL", cpi],
@@ -301,7 +330,7 @@ export async function GET() {
       gdp: {
         ...gdp,
         fredId: "GDP",
-        label: "US GDP (billions USD)",
+        label: "US Real GDP YoY %",
         source: "FRED",
         frequency: "quarterly",
       },

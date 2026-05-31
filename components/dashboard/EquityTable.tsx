@@ -3,16 +3,14 @@
 import { useState, useMemo } from "react";
 import { ChangeChip } from "@/components/ui/ChangeChip";
 import { SortIcon, type SortDir } from "@/components/ui/SortIcon";
-import { fmtNum } from "@/lib/formatters";
 import type { EquityEntry } from "@/lib/types";
 
-type SortKey = "price" | "1D" | "1W" | "1M" | "YTD";
+type SortKey = "1D" | "1W" | "1M" | "YTD";
 
 const TD  = "text-xs tabular-nums text-slate-300 text-right py-2 px-2";
 const TDL = "text-xs py-2 pl-5 pr-2";
 
 function getValue(row: EquityEntry, key: SortKey): number {
-  if (key === "price") return row.price ?? -Infinity;
   return row.returns[key] ?? -Infinity;
 }
 
@@ -101,7 +99,6 @@ export function EquityTable({
                 CCY
               </th>
             )}
-            <SortHeader label="Price" sortKey="price" {...headerProps} />
             <SortHeader label="1D"    sortKey="1D"    {...headerProps} />
             <SortHeader label="1W"    sortKey="1W"    {...headerProps} />
             <SortHeader label="1M"    sortKey="1M"    {...headerProps} />
@@ -143,9 +140,6 @@ export function EquityTable({
                   <span className="text-slate-600 text-[10px]">{row.currency ?? "USD"}</span>
                 </td>
               )}
-              <td className={TD}>
-                {row.price != null ? fmtNum(row.price, row.price >= 100 ? 2 : 4) : "—"}
-              </td>
               <td className={TD}><ChangeChip value={row.returns["1D"]} /></td>
               <td className={TD}><ChangeChip value={row.returns["1W"]} /></td>
               <td className={TD}><ChangeChip value={row.returns["1M"]} /></td>

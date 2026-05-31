@@ -49,9 +49,14 @@ export function fmtDate(iso: string | null | undefined): string {
 export function fmtShortDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    // Handle both "2025-01-01" and "2025-01-01T00:00:00Z"
+    // Handle ECB quarterly format "2024-Q4" → "Q4 2024"
+    const qMatch = iso.match(/^(\d{4})-Q([1-4])$/);
+    if (qMatch) return `Q${qMatch[2]} ${qMatch[1]}`;
+    // Handle "2025-01-01" and "2025-01-01T00:00:00Z"
     const d = iso.length === 10 ? iso + "T12:00:00Z" : iso;
-    return new Date(d).toLocaleDateString("en-US", {
+    const parsed = new Date(d);
+    if (isNaN(parsed.getTime())) return iso; // last-resort fallback
+    return parsed.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",

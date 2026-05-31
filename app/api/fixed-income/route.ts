@@ -38,6 +38,7 @@ type ReturnPeriods = {
   "YTD": number | null;
 };
 
+/** For credit ETFs — standard % price return */
 function computePeriods(dates: string[], closes: number[]): ReturnPeriods {
   if (closes.length < 2) {
     return { "1D": null, "1W": null, "1M": null, "3M": null, "1Y": null, "YTD": null };
@@ -51,6 +52,49 @@ function computePeriods(dates: string[], closes: number[]): ReturnPeriods {
     "3M":  computeReturn(closes, 90),
     "1Y":  computeReturn(closes, 365),
     "YTD": computeYTD(dates, closes),
+  };
+}
+
+/**
+ * For Treasury yields — absolute change in basis points (1 bp = 0.01 pp).
+ * Returns values like +12.5 meaning "+12.5 bps".
+ */
+function computeYieldBps(dates: string[], closes: number[]): ReturnPeriods {
+  if (closes.length < 2) {
+    return { "1D": null, "1W": null, "1M": null, "3M": null, "1Y": null, "YTD": null };
+  }
+  const last = closes.at(-1)!;
+
+  function bpsChange(daysBack: number): number | null {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysBack);
+    const cutoffStr = cutoff.toISOString().split("T")[0];
+    for (let i = dates.length - 2; i >= 0; i--) {
+      if (dates[i] <= cutoffStr) {
+        return parseFloat(((last - closes[i]) * 100).toFixed(1));
+      }
+    }
+    return null;
+  }
+
+  // YTD: change from last trading day of previous year
+  function bpsYtd(): number | null {
+    const prevYearEnd = `${new Date().getFullYear() - 1}-12-31`;
+    for (let i = dates.length - 2; i >= 0; i--) {
+      if (dates[i] <= prevYearEnd) {
+        return parseFloat(((last - closes[i]) * 100).toFixed(1));
+      }
+    }
+    return null;
+  }
+
+  return {
+    "1D":  closes.at(-2) != null ? parseFloat(((last - closes.at(-2)!) * 100).toFixed(1)) : null,
+    "1W":  bpsChange(7),
+    "1M":  bpsChange(30),
+    "3M":  bpsChange(90),
+    "1Y":  bpsChange(365),
+    "YTD": bpsYtd(),
   };
 }
 
@@ -123,7 +167,7 @@ export async function GET() {
       treasuryData.push({
         ticker, label, tenor,
         yieldLevel: hist.closes.at(-1) ?? null,
-        returns: computePeriods(hist.dates, hist.closes),
+        returns: computeYieldBps(hist.dates, hist.closes),
         history: hist.dates.map((d, i) => ({ date: d, yield: hist.closes[i] })),
         dataStatus: "ok",
       });

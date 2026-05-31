@@ -49,23 +49,33 @@ export function useHistoryData(dataset: string) {
 // ── Timeframe helpers ─────────────────────────────────────────────────────────
 
 export const TIMEFRAMES = [
-  { label: "1M", days: 30 },
-  { label: "3M", days: 90 },
-  { label: "6M", days: 180 },
-  { label: "1Y", days: 365 },
-  { label: "3Y", days: 365 * 3 + 60 },
+  { label: "1M",  days: 30 },
+  { label: "3M",  days: 90 },
+  { label: "6M",  days: 180 },
+  // YTD: days=0 is a sentinel — filterByDays handles it specially
+  { label: "YTD", days: 0 },
+  { label: "1Y",  days: 365 },
+  { label: "3Y",  days: 365 * 3 + 60 },
 ] as const;
 
 export type TimeframeLabel = (typeof TIMEFRAMES)[number]["label"];
 
-/** Filter a series to only the last N calendar days */
+/** Filter a series to only the last N calendar days.
+ *  days=0 is a special sentinel meaning "Year-to-Date" (from Dec 31 previous year). */
 export function filterByDays(
   series: HistoryPoint[],
   days: number
 ): HistoryPoint[] {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  let cutoffStr: string;
+  if (days === 0) {
+    // YTD: include everything from December 31 of the previous year onwards
+    const year = new Date().getFullYear();
+    cutoffStr = `${year - 1}-12-31`;
+  } else {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    cutoffStr = cutoff.toISOString().split("T")[0];
+  }
   return series.filter((p) => p.date >= cutoffStr);
 }
 

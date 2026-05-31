@@ -144,8 +144,11 @@ function EquitiesTab({ eq }: { eq: EquitiesSnapshot | null }) {
         <SectionCard title="US Broad — Normalized Price History">
           <IndexHistoryChart seriesDefs={US_BROAD_SERIES} defaultTimeframe="1Y" />
         </SectionCard>
-        <SectionCard title="Sector YTD Performance">
-          <SectorBarChart rows={eq?.usSectors ?? []} />
+        <SectionCard title="Sector Performance">
+          <SectorBarChart
+            rows={eq?.usSectors ?? []}
+            spRow={eq?.usBroad.find((e) => e.ticker === "^GSPC") ?? null}
+          />
         </SectionCard>
       </div>
 
@@ -322,7 +325,12 @@ function MacroTab({
       {/* Global macro charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="US Rate Cycle — Fed Funds vs Inflation">
-          <GlobalMacroChart seriesDefs={RATE_CYCLE_SERIES} defaultTimeframe="3Y" height={240} />
+          <GlobalMacroChart
+            seriesDefs={RATE_CYCLE_SERIES}
+            defaultTimeframe="3Y"
+            height={240}
+            yAxisDomain={[0, "auto"]}
+          />
         </SectionCard>
         <SectionCard title="Real Yields &amp; Breakeven Inflation">
           <GlobalMacroChart seriesDefs={REAL_YIELD_SERIES} defaultTimeframe="3Y" height={240} zeroLine />
@@ -330,7 +338,12 @@ function MacroTab({
       </div>
 
       <SectionCard title="DXY — US Dollar Index">
-        <GlobalMacroChart seriesDefs={DXY_SERIES} defaultTimeframe="3Y" height={220} />
+        <GlobalMacroChart
+          seriesDefs={DXY_SERIES}
+          defaultTimeframe="3Y"
+          height={220}
+          yAxisDomain={["auto", "auto"]}
+        />
       </SectionCard>
 
       {/* Colombia charts */}

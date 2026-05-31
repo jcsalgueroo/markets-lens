@@ -6,14 +6,14 @@ const THL = "text-[10px] font-medium text-slate-500 uppercase tracking-wider tex
 const TD = "text-xs tabular-nums text-slate-300 text-right py-2 px-2";
 const TDL = "text-xs py-2 pl-5 pr-2";
 
-/** Yield changes use percentage return math — show with sign + % */
+/** Treasury yield changes are stored as basis points (bps). */
 function YieldChange({ value }: { value: number | null }) {
   if (value == null) return <span className="text-slate-600">—</span>;
-  const color = changeColor(value, 0.02);
+  const color = changeColor(value, 1); // 1 bps threshold for color
   const sign = value >= 0 ? "+" : "";
   return (
     <span className={`${color} tabular-nums`}>
-      {sign}{value.toFixed(2)}%
+      {sign}{value.toFixed(1)} bps
     </span>
   );
 }
@@ -38,6 +38,7 @@ export function TreasuryTable({ rows }: { rows: TreasuryEntry[] }) {
             <th className={TH}>1D∆</th>
             <th className={TH}>1W∆</th>
             <th className={TH}>1M∆</th>
+            <th className={TH}>YTD∆</th>
             <th className={`${TH} pr-5`}>1Y∆</th>
           </tr>
         </thead>
@@ -62,6 +63,7 @@ export function TreasuryTable({ rows }: { rows: TreasuryEntry[] }) {
               <td className={TD}><YieldChange value={row.returns["1D"]} /></td>
               <td className={TD}><YieldChange value={row.returns["1W"]} /></td>
               <td className={TD}><YieldChange value={row.returns["1M"]} /></td>
+              <td className={TD}><YieldChange value={row.returns["YTD"]} /></td>
               <td className={`${TD} pr-5`}><YieldChange value={row.returns["1Y"]} /></td>
             </tr>
           ))}

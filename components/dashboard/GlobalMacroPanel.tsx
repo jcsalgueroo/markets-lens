@@ -96,11 +96,10 @@ export function GlobalMacroPanel({ data }: { data: GlobalSnapshot | null }) {
           frequency="monthly"
         />
         <MacroRow
-          label="GDP"
+          label="GDP YoY"
           value={usMacro.gdp.value}
           date={usMacro.gdp.date}
           status={usMacro.gdp.status}
-          unit="B"
           frequency="quarterly"
         />
         <MacroRow
@@ -199,8 +198,12 @@ export function GlobalMacroPanel({ data }: { data: GlobalSnapshot | null }) {
 
       {/* OECD CLI */}
       <div className="p-5">
-        <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-3">
+        <p className="text-[10px] text-slate-600 uppercase tracking-wider mb-1">
           OECD Composite Leading Indicators
+        </p>
+        <p className="text-[9px] text-slate-700 mb-3 leading-relaxed">
+          Index ≈ 100 = long-run trend. &gt;100 = above-trend expansion.
+          &lt;100 = below-trend contraction. Source: FRED / OECD.
         </p>
         {data.oecd?.cli && data.oecd.cli.length > 0 ? (
           <div className="space-y-0">

@@ -41,6 +41,7 @@ const TICK_INTERVAL: Record<TimeframeLabel, number> = {
   "3M":  1,
   "6M":  3,
   "1Y":  7,
+  "YTD": 3,
   "3Y":  12,
 };
 
@@ -59,6 +60,11 @@ interface Props {
   zeroLine?: boolean;
   referenceLines?: RefLine[];
   note?: string;
+  /**
+   * Recharts YAxis domain.  Defaults to ['auto','auto'] (zoomed to data range).
+   * Pass [0,'auto'] to force the Y-axis to start at zero.
+   */
+  yAxisDomain?: [number | string, number | string];
 }
 
 export function GlobalMacroChart({
@@ -69,6 +75,7 @@ export function GlobalMacroChart({
   zeroLine = false,
   referenceLines = [],
   note,
+  yAxisDomain = ["auto", "auto"],
 }: Props) {
   const [tf, setTf] = useState<TimeframeLabel>(defaultTimeframe);
   const { data, state } = useHistoryData(dataset);
@@ -155,6 +162,7 @@ export function GlobalMacroChart({
             axisLine={false}
             tickFormatter={(v: number) => fmtValue(v, yFormat)}
             width={48}
+            domain={yAxisDomain}
           />
           {zeroLine && <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 3" />}
           {referenceLines.map((rl) => (
