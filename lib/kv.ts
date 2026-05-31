@@ -23,17 +23,17 @@ export type SnapshotKey =
   | "snapshot:ts";
 
 export async function kvSet(key: SnapshotKey, value: unknown): Promise<void> {
-  await redis.set(key, JSON.stringify(value), { ex: SNAPSHOT_TTL });
+  // Store as plain object — Upstash SDK serializes to JSON internally.
+  // Do NOT JSON.stringify here: the SDK auto-deserializes on read, so
+  // double-stringifying causes kvGet to receive an already-parsed object
+  // and then fail on a second JSON.parse call.
+  await redis.set(key, value, { ex: SNAPSHOT_TTL });
 }
 
 export async function kvGet<T = unknown>(key: SnapshotKey): Promise<T | null> {
-  const raw = await redis.get<string>(key);
-  if (raw == null) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
+  // Upstash SDK auto-deserializes the stored JSON — return directly.
+  const value = await redis.get<T>(key);
+  return value ?? null;
 }
 
 export async function kvSetTimestamp(): Promise<void> {
