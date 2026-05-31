@@ -51,6 +51,7 @@ export async function blobWriteHistory(
     access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
+    allowOverwrite: true,
   });
   return blob.url;
 }
