@@ -71,6 +71,8 @@ type CommodityEntry = {
   /** USD-normalised price (centsPerUnit tickers divided by 100). */
   priceUsd: number | null;
   returns: ReturnPeriods;
+  /** Weekly-thinned USD price history for charts (every 5th bar). */
+  history: { date: string; value: number }[];
   isEtf: boolean;
   dataStatus: "ok" | "error";
   error?: string;
@@ -90,18 +92,27 @@ export async function GET() {
         unit: def.unit, currency: def.currency,
         priceRaw: null, priceUsd: null,
         returns: { "1D": null, "1W": null, "1M": null, "3M": null, "6M": null, "YTD": null, "1Y": null },
+        history: [],
         isEtf: def.isEtf ?? false,
         dataStatus: "error", error: hist.error ?? "No data",
       });
     } else {
       const priceRaw = hist.closes.at(-1) ?? null;
       const priceUsd = priceRaw != null && def.centsPerUnit ? priceRaw / 100 : priceRaw;
+      // Thin to weekly and normalise to USD
+      const history = hist.dates
+        .map((d, i) => ({
+          date: d,
+          value: def.centsPerUnit ? hist.closes[i] / 100 : hist.closes[i],
+        }))
+        .filter((_, i) => i % 5 === 0 || i === hist.closes.length - 1);
       entries.push({
         ticker: def.ticker, label: def.label, group: def.group,
         unit: def.unit, currency: def.currency,
         priceRaw,
         priceUsd,
         returns: computePeriods(hist.dates, hist.closes),
+        history,
         isEtf: def.isEtf ?? false,
         dataStatus: "ok",
       });
