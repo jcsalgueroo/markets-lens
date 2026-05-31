@@ -73,12 +73,15 @@ export async function blobReadHistory(
     });
     if (!blobs.length) return null;
 
-    // For private stores, blobs[0].url requires a signed token that a plain
-    // fetch() doesn't send — it returns 401.  blobs[0].downloadUrl is the
-    // pre-signed URL emitted by list() that IS directly fetchable without
-    // additional auth headers, even for private stores.
-    const res = await fetch(blobs[0].downloadUrl, {
+    // Private-store blobs require authentication on every fetch.
+    // `blobs[0].downloadUrl` is just `url?download=1` — it still needs
+    // auth.  The correct server-side approach is to include the
+    // BLOB_READ_WRITE_TOKEN in an Authorization: Bearer header.
+    const res = await fetch(blobs[0].url, {
       signal: AbortSignal.timeout(8_000),
+      headers: {
+        Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN ?? ""}`,
+      },
     });
     if (!res.ok) return null;
     return res.json() as Promise<HistoryBlob>;
