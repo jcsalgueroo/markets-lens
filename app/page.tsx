@@ -18,6 +18,7 @@ import { YieldHistoryChart } from "@/components/charts/YieldHistoryChart";
 import { CommoditiesHistoryChart } from "@/components/charts/CommoditiesHistoryChart";
 import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
 import { GlobalMacroChart } from "@/components/charts/GlobalMacroChart";
+import { YieldCurveChart } from "@/components/charts/YieldCurveChart";
 
 import type {
   EquitiesSnapshot,
@@ -177,10 +178,18 @@ function EquitiesTab({ eq }: { eq: EquitiesSnapshot | null }) {
 function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
   return (
     <div className="space-y-6">
-      {/* Treasury yield history chart */}
-      <SectionCard title="US Treasury Yield History">
-        <YieldHistoryChart defaultTimeframe="1Y" />
-      </SectionCard>
+      {/* Charts row: time-series history + current curve shape */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Treasury Yield History">
+          <YieldHistoryChart defaultTimeframe="1Y" />
+        </SectionCard>
+        <SectionCard title="Yield Curve">
+          <YieldCurveChart
+            curve={fi?.yieldCurve ?? []}
+            asOf={fi?.asOf ?? null}
+          />
+        </SectionCard>
+      </div>
 
       {/* Tables */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -191,7 +200,8 @@ function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
           <CreditTable rows={fi?.creditEtfs ?? []} />
         </SectionCard>
       </div>
-      <SectionCard title="Yield Curve &amp; Spreads">
+
+      <SectionCard title="Key Spreads">
         <SpreadsPanel
           spreads={fi?.spreads ?? []}
           curve={fi?.yieldCurve ?? []}
