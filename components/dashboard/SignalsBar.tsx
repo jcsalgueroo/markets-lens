@@ -20,8 +20,9 @@ type SignalStatus = "green" | "amber" | "red" | "na";
 interface Signal {
   category: string;
   label: string;
-  value?: string;   // small sub-label (e.g. "−0.20pp")
+  value?: string;    // small sub-label (e.g. "−0.20pp")
   status: SignalStatus;
+  tooltip: string;   // hover methodology explanation
 }
 
 // ── Colour map ────────────────────────────────────────────────────────────────
@@ -77,6 +78,12 @@ function computeSignals(
       : curveSpread < 0   ? "red"
       : curveSpread < 0.3 ? "amber"
       :                     "green",
+    tooltip:
+      "2Y10Y spread (10Y minus 2Y Treasury yield).\n" +
+      "🟢 Normal  > +0.30pp\n" +
+      "🟡 Flat    0 to +0.30pp\n" +
+      "🔴 Inverted < 0pp — historically precedes recessions.\n" +
+      "Source: Yahoo Finance (10Y) + FRED DGS2.",
   };
 
   // ── 2. HY Credit Stress (ICE BofA OAS via FRED) ───────────────────────────
@@ -95,6 +102,12 @@ function computeSignals(
       : hyOas > 5.5 ? "red"
       : hyOas > 3.5 ? "amber"
       :               "green",
+    tooltip:
+      "ICE BofA US High Yield Option-Adjusted Spread.\n" +
+      "🟢 Tight    < 3.50% — risk-on, credit benign\n" +
+      "🟡 Normal   3.50–5.50%\n" +
+      "🔴 Elevated > 5.50% — credit stress / risk-off\n" +
+      "Source: FRED BAMLH0A0HYM2.",
   };
 
   // ── 3. US Equity Trend (S&P 500 1M) ──────────────────────────────────────
@@ -117,6 +130,12 @@ function computeSignals(
       : sp1m > 2   ? "green"
       : sp1m < -2  ? "red"
       :              "amber",
+    tooltip:
+      "S&P 500 trailing 1-month total return.\n" +
+      "🟢 Bullish  > +2%\n" +
+      "🟡 Mixed    −2% to +2%\n" +
+      "🔴 Bearish  < −2%\n" +
+      "Source: Yahoo Finance ^GSPC.",
   };
 
   // ── 4. Fed Policy (rate level + PCE context) ──────────────────────────────
@@ -147,6 +166,13 @@ function computeSignals(
         ? `${fedFunds.toFixed(2)}%${corePce != null ? ` · PCE ${corePce.toFixed(1)}%` : ""}`
         : undefined,
     status: fedStatus,
+    tooltip:
+      "Effective Federal Funds Rate level.\n" +
+      "🟢 Normalizing  2.50–5.00% (cuts in progress or near neutral)\n" +
+      "🟢 Accommodative < 2.50% (supportive for risk assets)\n" +
+      "🟡 Restrictive  ≥ 5.00% (headwind for equities and credit)\n" +
+      "Core PCE shown for inflation context.\n" +
+      "Source: FRED FEDFUNDS / PCEPILFE.",
   };
 
   // ── 5. US Dollar (DXY 1W change) ─────────────────────────────────────────
@@ -176,6 +202,11 @@ function computeSignals(
         ? `DXY ${dxy.value.toFixed(2)}${dxyChange != null ? ` (${dxyChange >= 0 ? "+" : ""}${dxyChange.toFixed(1)}% 1W)` : ""}`
         : undefined,
     status: dxyStatus,
+    tooltip:
+      "DXY US Dollar Index — 1-week change.\n" +
+      "🟢 Stable / Weakening  ≤ +1% 1W (positive for EM and commodities)\n" +
+      "🟡 Strengthening       > +1% 1W (headwind for EM clients and COP)\n" +
+      "Source: Yahoo Finance DX-Y.NYB.",
   };
 
   // ── 6. COP/USD Stability (TRM 1M) ────────────────────────────────────────
@@ -198,6 +229,13 @@ function computeSignals(
       : trm1m >  3  ? "red"
       : trm1m < -3  ? "green"
       :               "amber",
+    tooltip:
+      "TRM (Tasa Representativa del Mercado) 1-month change.\n" +
+      "Positive = COP depreciated vs USD (higher cost for COP-based clients).\n" +
+      "🟢 COP Strong   < −3% 1M\n" +
+      "🟡 Stable       −3% to +3% 1M\n" +
+      "🔴 COP Weak     > +3% 1M (FX headwind for local investors)\n" +
+      "Source: Yahoo Finance USDCOP=X.",
   };
 
   return [curveSignal, hyOasSignal, equitySignal, fedSignal, dxySignal, copSignal];
@@ -234,9 +272,10 @@ export function SignalsBar({ eq, fi, col, glb }: Props) {
           return (
             <div
               key={sig.category}
+              title={sig.tooltip}
               className={`
                 flex-shrink-0 rounded-lg border px-3 py-2
-                min-w-[118px] max-w-[160px]
+                min-w-[118px] max-w-[160px] cursor-default
                 ${c.border} ${c.bg}
               `}
             >

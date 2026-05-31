@@ -488,6 +488,17 @@ export default async function Dashboard() {
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800 mt-6">
         <div className="max-w-[1600px] mx-auto px-6 py-4 space-y-2">
+          {/* Print-only: snapshot date so every PDF is self-documenting */}
+          {asOf && (
+            <p className="hidden print:block text-slate-600 text-[10px] mb-1">
+              Data snapshot:{" "}
+              {new Date(asOf).toLocaleString("en-US", {
+                month: "long", day: "numeric", year: "numeric",
+                hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
+              })}
+            </p>
+          )}
+
           {/* FRED® required attribution */}
           <p className="text-slate-600 text-[10px] leading-relaxed">
             This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.

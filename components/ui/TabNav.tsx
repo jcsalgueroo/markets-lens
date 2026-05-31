@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 
 export interface TabDef {
   id: string;
@@ -18,16 +18,33 @@ interface TabNavProps {
 export function TabNav({ tabs, panels, defaultTab }: TabNavProps) {
   const [active, setActive] = useState(defaultTab ?? tabs[0]?.id);
 
+  // Keyboard shortcuts: press 1–5 to jump to the corresponding tab.
+  // Does not fire when focus is inside an input / textarea / select.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const idx = parseInt(e.key, 10) - 1;
+      if (idx >= 0 && idx < tabs.length) {
+        setActive(tabs[idx].id);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [tabs]);
+
   return (
     <div>
       {/* Tab bar — hidden in print */}
       <div className="flex gap-1 border-b border-slate-800 px-4 md:px-6 overflow-x-auto print:hidden">
-        {tabs.map((tab) => {
+        {tabs.map((tab, idx) => {
           const isActive = tab.id === active;
           return (
             <button
               key={tab.id}
               onClick={() => setActive(tab.id)}
+              title={`${tab.label} (press ${idx + 1})`}
               className={`
                 flex items-center gap-1.5 px-4 py-3 text-xs font-medium
                 border-b-2 -mb-px whitespace-nowrap transition-colors
@@ -50,6 +67,16 @@ export function TabNav({ tabs, panels, defaultTab }: TabNavProps) {
                   {tab.badge}
                 </span>
               )}
+              {/* Keyboard shortcut hint — subtle, desktop only */}
+              <span
+                className={`
+                  hidden md:inline-block text-[8px] tabular-nums rounded px-0.5
+                  transition-colors
+                  ${isActive ? "text-sky-600" : "text-slate-700"}
+                `}
+              >
+                {idx + 1}
+              </span>
             </button>
           );
         })}
