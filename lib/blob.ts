@@ -59,6 +59,68 @@ export async function blobWriteHistory(
   return blob.url;
 }
 
+// ── Yield curve history ───────────────────────────────────────────────────────
+// Stores one snapshot per cron run so the chart can overlay past curves.
+
+export interface CurveSnapshot {
+  /** YYYY-MM-DD — the date the cron ran and captured this curve */
+  date: string;
+  curve: { tenor: string; yield: number | null }[];
+}
+
+export interface CurveHistoryBlob {
+  updatedAt: string;
+  /** Oldest → newest, capped at 365 entries (~one year of daily cron runs) */
+  snapshots: CurveSnapshot[];
+}
+
+const CURVE_HISTORY_PATH = "history/yield-curve.json";
+const MAX_CURVE_SNAPSHOTS = 365;
+
+/**
+ * Append today's yield curve to the rolling history blob.
+ * Deduplicates by date so re-running the cron on the same day is idempotent.
+ */
+export async function blobWriteCurveHistory(snapshot: CurveSnapshot): Promise<void> {
+  const existing = await blobReadCurveHistory();
+  const snapshots = existing?.snapshots ?? [];
+
+  // Deduplicate: replace any entry for the same date
+  const deduplicated = snapshots.filter((s) => s.date !== snapshot.date);
+  deduplicated.push(snapshot);
+
+  // Keep only the most recent MAX_CURVE_SNAPSHOTS entries
+  const trimmed = deduplicated.slice(-MAX_CURVE_SNAPSHOTS);
+
+  const payload: CurveHistoryBlob = {
+    updatedAt: new Date().toISOString(),
+    snapshots: trimmed,
+  };
+
+  await put(CURVE_HISTORY_PATH, JSON.stringify(payload), {
+    access: "private",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+/** Read the yield curve history blob.  Returns null if not yet written. */
+export async function blobReadCurveHistory(): Promise<CurveHistoryBlob | null> {
+  try {
+    const { blobs } = await list({ prefix: CURVE_HISTORY_PATH, limit: 1 });
+    if (!blobs.length) return null;
+    const res = await fetch(blobs[0].url, {
+      signal: AbortSignal.timeout(8_000),
+      headers: { Authorization: `Bearer ${process.env.BLOB_READ_WRITE_TOKEN ?? ""}` },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<CurveHistoryBlob>;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Read a history blob for a dataset.
  * Returns null if the blob doesn't exist yet or on any error.

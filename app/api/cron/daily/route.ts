@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kvSet, kvSetTimestamp } from "@/lib/kv";
-import { blobWriteHistory, HistorySeries } from "@/lib/blob";
+import { blobWriteHistory, blobWriteCurveHistory, HistorySeries } from "@/lib/blob";
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
@@ -201,6 +201,26 @@ export async function GET(req: NextRequest) {
     } catch (e: unknown) {
       results[`blob:${dataset}`] = e instanceof Error ? e.message : String(e);
     }
+  }
+
+  // ── Step 3: append today's yield curve to the curve history blob ─────────
+  // This is a rolling append (up to 365 days) used by the YieldCurveChart to
+  // render 1W ago / 1M ago / Dec 31 overlay lines.
+  try {
+    const fiRaw = fetched["/api/fixed-income"] as Record<string, unknown> | undefined;
+    const yieldCurve = fiRaw?.yieldCurve as
+      | Array<{ tenor: string; yield: number | null }>
+      | undefined;
+    if (yieldCurve && yieldCurve.length > 0) {
+      const asOf   = fiRaw?.asOf as string | undefined;
+      const date   = asOf ? asOf.split("T")[0] : new Date().toISOString().split("T")[0];
+      await blobWriteCurveHistory({ date, curve: yieldCurve });
+      results["blob:yield-curve"] = "ok";
+    } else {
+      results["blob:yield-curve"] = "skipped (no curve data)";
+    }
+  } catch (e: unknown) {
+    results["blob:yield-curve"] = e instanceof Error ? e.message : String(e);
   }
 
   const allOk = Object.values(results).every(
