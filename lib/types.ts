@@ -69,12 +69,24 @@ export interface SpreadEntry {
   description: string;
 }
 
+export interface OasEntry {
+  value: number | null;
+  date: string | null;
+  label: string;
+  ticker: string;
+}
+
 export interface FixedIncomeSnapshot {
   asOf: string;
   treasuries: TreasuryEntry[];
   creditEtfs: CreditEntry[];
   spreads: SpreadEntry[];
   yieldCurve: { tenor: string; yield: number | null }[];
+  oasData?: {
+    hyOas: OasEntry;
+    igOas: OasEntry;
+    hyIgSpread: number | null;
+  };
 }
 
 // ── Commodities ───────────────────────────────────────────────────────────────

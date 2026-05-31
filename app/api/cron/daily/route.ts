@@ -59,6 +59,14 @@ function extractFixedIncomeHistory(data: unknown): HistorySeries {
     series["DGS2"] = dgs2History.map((p) => ({ date: p.date, value: p.yield }));
   }
 
+  // FRED OAS credit spreads — stored in oasData.hyOas.history / igOas.history
+  type OasHistPoint = { date: string; value: number };
+  const oasData = (d.oasData as Record<string, { value: number | null; history: OasHistPoint[] }>) ?? {};
+  const hyHistory = oasData.hyOas?.history ?? [];
+  const igHistory = oasData.igOas?.history ?? [];
+  if (hyHistory.length > 0) series["HY_OAS"] = toSeries(hyHistory);
+  if (igHistory.length > 0) series["IG_OAS"] = toSeries(igHistory);
+
   // Credit ETF price history (weekly)
   const creditEtfs = (d.creditEtfs as unknown[]) ?? [];
   for (const c of creditEtfs) {

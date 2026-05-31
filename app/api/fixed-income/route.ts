@@ -94,7 +94,19 @@ function computeSpread(a: number | null, b: number | null): number | null {
   return a != null && b != null ? a - b : null;
 }
 
+// ── FRED OAS series ───────────────────────────────────────────────────────────
+// ICE BofA OAS data via FRED public CSV (no API key required).
+
+const OAS_SERIES = [
+  { seriesId: "BAMLH0A0HYM2", key: "hyOas", label: "US HY OAS" },
+  { seriesId: "BAMLC0A0CM",   key: "igOas", label: "US IG OAS" },
+] as const;
+
+type OasKey = typeof OAS_SERIES[number]["key"];
+
 // ── GET handler ───────────────────────────────────────────────────────────────
+
+export const maxDuration = 60;
 
 export async function GET() {
   // ── Fetch Treasuries ──────────────────────────────────────────────────────
@@ -246,7 +258,36 @@ export async function GET() {
     },
   ];
 
-  // ── HY-IG credit spread proxy ─────────────────────────────────────────────
+  // ── FRED OAS credit spreads ───────────────────────────────────────────────
+  // ICE BofA US HY and IG OAS — free FRED CSV, run in parallel.
+  // 3Y of daily history stored for charts; falls back to null on error.
+  const oasSettled = await Promise.allSettled(
+    OAS_SERIES.map(async ({ seriesId }) => {
+      const obs = await fetchFredCsv(seriesId);
+      const latest = obs.at(-1);
+      const history = obs
+        .filter((o) => o.date >= THREE_YEARS_AGO)
+        .map((o) => ({ date: o.date, value: o.value }));
+      return { value: latest?.value ?? null, date: latest?.date ?? null, history };
+    })
+  );
+
+  const oasData = {} as Record<OasKey, { value: number | null; date: string | null; history: { date: string; value: number }[] }>;
+  OAS_SERIES.forEach(({ key }, i) => {
+    const r = oasSettled[i];
+    oasData[key] = r.status === "fulfilled"
+      ? r.value
+      : { value: null, date: null, history: [] };
+    if (r.status === "rejected") {
+      console.log(`  ⚠️ OAS ${key}: ${String(r.reason).slice(0, 60)}`);
+    }
+  });
+
+  const hyOas = oasData.hyOas.value;
+  const igOas = oasData.igOas.value;
+  const hyIgOasSpread = hyOas != null && igOas != null ? hyOas - igOas : null;
+
+  // ── HY-IG credit spread proxy (kept for legacy; superseded by OAS above) ──
   const hyg = creditData.find((c) => c.ticker === "HYG");
   const lqd = creditData.find((c) => c.ticker === "LQD");
   const hygLqdReturnDiff1M =
@@ -278,6 +319,7 @@ export async function GET() {
     const val = s.value != null ? (s.value > 0 ? "+" : "") + s.value.toFixed(3) + "pp" : "null";
     console.log(`    ${s.label}: ${val}`);
   });
+  console.log(`  OAS — HY: ${hyOas?.toFixed(2) ?? "n/a"}%  IG: ${igOas?.toFixed(2) ?? "n/a"}%  HY-IG: ${hyIgOasSpread?.toFixed(2) ?? "n/a"}pp`);
   console.log("══════════════════════════════════════════════════════════\n");
 
   return NextResponse.json({
@@ -286,7 +328,13 @@ export async function GET() {
     creditEtfs: creditData,
     yieldCurve,
     spreads,
-    // fredData carries DGS2 history for the cron to extract into the blob
+    // OAS credit spreads (ICE BofA / FRED)
+    oasData: {
+      hyOas: { ...oasData.hyOas, label: "US HY OAS",    ticker: "BAMLH0A0HYM2" },
+      igOas: { ...oasData.igOas, label: "US IG OAS",    ticker: "BAMLC0A0CM"   },
+      hyIgSpread: hyIgOasSpread,
+    },
+    // fredTenors carries DGS2 history for the cron to extract into the blob
     fredTenors: fredData,
     _meta: {
       hygLqdReturnDiff1M,

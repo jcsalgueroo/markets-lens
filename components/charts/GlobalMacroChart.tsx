@@ -36,18 +36,6 @@ export interface RefLine {
   dashed?: boolean;
 }
 
-interface Props {
-  seriesDefs: MacroSeriesDef[];
-  defaultTimeframe?: TimeframeLabel;
-  height?: number;
-  /** Reference line at y=0 */
-  zeroLine?: boolean;
-  /** Additional custom reference lines */
-  referenceLines?: RefLine[];
-  /** Footer note below the chart */
-  note?: string;
-}
-
 const TICK_INTERVAL: Record<TimeframeLabel, number> = {
   "1M":  0,
   "3M":  1,
@@ -62,8 +50,20 @@ function fmtValue(v: number, format: MacroSeriesDef["format"] = "pct"): string {
   return `${v.toFixed(2)}%`;
 }
 
+interface Props {
+  seriesDefs: MacroSeriesDef[];
+  /** Which history blob to fetch from (default: "macro-global") */
+  dataset?: string;
+  defaultTimeframe?: TimeframeLabel;
+  height?: number;
+  zeroLine?: boolean;
+  referenceLines?: RefLine[];
+  note?: string;
+}
+
 export function GlobalMacroChart({
   seriesDefs,
+  dataset = "macro-global",
   defaultTimeframe = "3Y",
   height = 240,
   zeroLine = false,
@@ -71,7 +71,7 @@ export function GlobalMacroChart({
   note,
 }: Props) {
   const [tf, setTf] = useState<TimeframeLabel>(defaultTimeframe);
-  const { data, state } = useHistoryData("macro-global");
+  const { data, state } = useHistoryData(dataset);
 
   const chartData = useMemo(() => {
     if (!data) return [];

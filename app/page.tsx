@@ -201,10 +201,21 @@ function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
         </SectionCard>
       </div>
 
-      <SectionCard title="Key Spreads">
+      <SectionCard title="Key Spreads &amp; Credit OAS">
         <SpreadsPanel
           spreads={fi?.spreads ?? []}
           curve={fi?.yieldCurve ?? []}
+          oasData={fi?.oasData}
+        />
+      </SectionCard>
+
+      <SectionCard title="Credit Spread History — HY vs IG OAS">
+        <GlobalMacroChart
+          dataset="fixed-income"
+          seriesDefs={OAS_HISTORY_SERIES}
+          defaultTimeframe="3Y"
+          height={240}
+          note="ICE BofA Option-Adjusted Spreads · Source: FRED BAMLH0A0HYM2 / BAMLC0A0CM · daily"
         />
       </SectionCard>
     </div>
@@ -228,6 +239,13 @@ function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
     </div>
   );
 }
+
+// ── Fixed-income OAS series ───────────────────────────────────────────────────
+
+const OAS_HISTORY_SERIES = [
+  { id: "HY_OAS", label: "US HY OAS", color: "#f87171", format: "pct" as const }, // rose
+  { id: "IG_OAS", label: "US IG OAS", color: "#38bdf8", format: "pct" as const }, // sky
+];
 
 // ── Valuation chart series definitions ────────────────────────────────────────
 

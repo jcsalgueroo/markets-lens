@@ -36,9 +36,10 @@ function SpreadValue({ value, label }: { value: number | null; label: string }) 
 interface SpreadsPanelProps {
   spreads: SpreadEntry[];
   curve: FixedIncomeSnapshot["yieldCurve"];
+  oasData?: FixedIncomeSnapshot["oasData"];
 }
 
-export function SpreadsPanel({ spreads, curve }: SpreadsPanelProps) {
+export function SpreadsPanel({ spreads, curve, oasData }: SpreadsPanelProps) {
   const hasData = spreads.length > 0 || curve.length > 0;
 
   if (!hasData) {
@@ -50,37 +51,85 @@ export function SpreadsPanel({ spreads, curve }: SpreadsPanelProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-800">
-      {/* Yield curve snapshot */}
+    <div className="divide-y divide-slate-800">
+      {/* Row 1: curve spreads */}
       <div>
-        <div className="px-5 pt-4 pb-2">
+        <div className="px-5 pt-4 pb-1">
           <p className="text-[10px] text-slate-600 uppercase tracking-wider">
-            Yield Curve Snapshot
-          </p>
-        </div>
-        <div className="flex items-end gap-4 px-5 pb-4 flex-wrap">
-          {curve.map((pt) => (
-            <div key={pt.tenor} className="text-center">
-              <div className="text-sky-400 text-sm font-medium tabular-nums">
-                {pt.yield != null ? `${pt.yield.toFixed(2)}%` : "—"}
-              </div>
-              <div className="text-[10px] text-slate-500 mt-1">{pt.tenor}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Spreads */}
-      <div>
-        <div className="px-5 pt-4 pb-2">
-          <p className="text-[10px] text-slate-600 uppercase tracking-wider">
-            Key Spreads
+            Treasury Curve Spreads
           </p>
         </div>
         {spreads.map((s) => (
           <SpreadValue key={s.label} value={s.value} label={s.label} />
         ))}
       </div>
+
+      {/* Row 2: OAS credit spreads */}
+      {oasData && (
+        <div>
+          <div className="px-5 pt-4 pb-1">
+            <p className="text-[10px] text-slate-600 uppercase tracking-wider">
+              Credit OAS — ICE BofA / FRED
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 divide-y md:divide-y-0 md:divide-x divide-slate-800">
+            {/* HY OAS */}
+            <div className="flex items-center justify-between py-3 px-5">
+              <div>
+                <span className="text-slate-200 text-xs">{oasData.hyOas.label}</span>
+                <div className="text-[10px] text-slate-600 mt-0.5">
+                  {oasData.hyOas.ticker}
+                  {oasData.hyOas.date && ` · ${oasData.hyOas.date}`}
+                </div>
+              </div>
+              <span className="text-rose-400 text-sm font-medium tabular-nums">
+                {oasData.hyOas.value != null
+                  ? `${oasData.hyOas.value.toFixed(2)}%`
+                  : "—"}
+              </span>
+            </div>
+            {/* IG OAS */}
+            <div className="flex items-center justify-between py-3 px-5">
+              <div>
+                <span className="text-slate-200 text-xs">{oasData.igOas.label}</span>
+                <div className="text-[10px] text-slate-600 mt-0.5">
+                  {oasData.igOas.ticker}
+                  {oasData.igOas.date && ` · ${oasData.igOas.date}`}
+                </div>
+              </div>
+              <span className="text-sky-400 text-sm font-medium tabular-nums">
+                {oasData.igOas.value != null
+                  ? `${oasData.igOas.value.toFixed(2)}%`
+                  : "—"}
+              </span>
+            </div>
+            {/* HY-IG spread */}
+            <div className="flex items-center justify-between py-3 px-5">
+              <div>
+                <span className="text-slate-200 text-xs">HY–IG OAS Spread</span>
+                <div className="text-[10px] text-slate-600 mt-0.5">
+                  True OAS differential
+                </div>
+              </div>
+              <span
+                className={`text-sm font-medium tabular-nums ${
+                  oasData.hyIgSpread != null
+                    ? oasData.hyIgSpread > 3.5
+                      ? "text-rose-400"
+                      : oasData.hyIgSpread > 2.5
+                      ? "text-amber-400"
+                      : "text-emerald-400"
+                    : "text-slate-600"
+                }`}
+              >
+                {oasData.hyIgSpread != null
+                  ? `+${oasData.hyIgSpread.toFixed(2)}pp`
+                  : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
