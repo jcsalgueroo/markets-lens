@@ -12,6 +12,9 @@ import { CommoditiesTable } from "@/components/dashboard/CommoditiesTable";
 import { ValuationPanel } from "@/components/dashboard/ValuationPanel";
 import { ColombiaPanel } from "@/components/dashboard/ColombiaPanel";
 import { GlobalMacroPanel } from "@/components/dashboard/GlobalMacroPanel";
+import { IndexHistoryChart } from "@/components/charts/IndexHistoryChart";
+import { SectorBarChart } from "@/components/charts/SectorBarChart";
+import { YieldHistoryChart } from "@/components/charts/YieldHistoryChart";
 
 import type {
   EquitiesSnapshot,
@@ -118,9 +121,27 @@ function KeyMetricsStrip({ eq, fi, com, col, glb }: KeyMetricsProps) {
 
 // ── Tab content builders ──────────────────────────────────────────────────────
 
+const US_BROAD_SERIES = [
+  { id: "^GSPC", label: "S&P 500",     color: "#38bdf8" },
+  { id: "^NDX",  label: "Nasdaq 100",  color: "#a78bfa" },
+  { id: "^RUT",  label: "Russell 2000", color: "#fbbf24" },
+  { id: "^DJI",  label: "Dow Jones",   color: "#fb7185" },
+];
+
 function EquitiesTab({ eq }: { eq: EquitiesSnapshot | null }) {
   return (
     <div className="space-y-6">
+      {/* Charts row */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Broad — Normalized Price History">
+          <IndexHistoryChart seriesDefs={US_BROAD_SERIES} defaultTimeframe="1Y" />
+        </SectionCard>
+        <SectionCard title="Sector YTD Performance">
+          <SectorBarChart rows={eq?.usSectors ?? []} />
+        </SectionCard>
+      </div>
+
+      {/* Tables */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="US Broad Markets">
           <EquityTable rows={eq?.usBroad ?? []} />
@@ -153,6 +174,12 @@ function EquitiesTab({ eq }: { eq: EquitiesSnapshot | null }) {
 function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
   return (
     <div className="space-y-6">
+      {/* Treasury yield history chart */}
+      <SectionCard title="US Treasury Yield History">
+        <YieldHistoryChart defaultTimeframe="1Y" />
+      </SectionCard>
+
+      {/* Tables */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="US Treasuries">
           <TreasuryTable rows={fi?.treasuries ?? []} />
