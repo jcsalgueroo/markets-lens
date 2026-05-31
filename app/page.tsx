@@ -17,6 +17,7 @@ import { SectorBarChart } from "@/components/charts/SectorBarChart";
 import { YieldHistoryChart } from "@/components/charts/YieldHistoryChart";
 import { CommoditiesHistoryChart } from "@/components/charts/CommoditiesHistoryChart";
 import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
+import { GlobalMacroChart } from "@/components/charts/GlobalMacroChart";
 
 import type {
   EquitiesSnapshot,
@@ -218,6 +219,23 @@ function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
   );
 }
 
+// ── Global macro series definitions ───────────────────────────────────────────
+
+const RATE_CYCLE_SERIES = [
+  { id: "FEDFUNDS", label: "Fed Funds Rate", color: "#f87171", format: "pct" as const }, // red
+  { id: "CPI",      label: "CPI YoY",        color: "#fbbf24", format: "pct" as const }, // amber
+  { id: "CorePCE",  label: "Core PCE YoY",   color: "#a78bfa", format: "pct" as const }, // violet
+];
+
+const REAL_YIELD_SERIES = [
+  { id: "DFII10", label: "Real 10Y Yield",      color: "#38bdf8", format: "pct" as const }, // sky
+  { id: "T10YIE", label: "10Y Breakeven Infl.", color: "#fb923c", format: "pct" as const }, // orange
+];
+
+const DXY_SERIES = [
+  { id: "DXY", label: "DXY — US Dollar Index", color: "#34d399", format: "index" as const }, // emerald
+];
+
 function MacroTab({
   colombia,
   global,
@@ -227,6 +245,20 @@ function MacroTab({
 }) {
   return (
     <div className="space-y-6">
+      {/* Global macro charts */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Rate Cycle — Fed Funds vs Inflation">
+          <GlobalMacroChart seriesDefs={RATE_CYCLE_SERIES} defaultTimeframe="3Y" height={240} />
+        </SectionCard>
+        <SectionCard title="Real Yields &amp; Breakeven Inflation">
+          <GlobalMacroChart seriesDefs={REAL_YIELD_SERIES} defaultTimeframe="3Y" height={240} zeroLine />
+        </SectionCard>
+      </div>
+
+      <SectionCard title="DXY — US Dollar Index">
+        <GlobalMacroChart seriesDefs={DXY_SERIES} defaultTimeframe="3Y" height={220} />
+      </SectionCard>
+
       {/* Colombia charts */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="TRM — USD/COP Exchange Rate">
