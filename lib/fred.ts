@@ -75,14 +75,20 @@ async function fetchFredCsvRaw(seriesId: string): Promise<FredObservation[]> {
 // ── Public interface ──────────────────────────────────────────────────────────
 
 /**
+ * Some FRED series are contributed data (e.g. Robert Shiller's CAPE)
+ * and may not be accessible through the keyed JSON API even with a valid key.
+ * Forcing these to the public CSV endpoint avoids silent API failures.
+ */
+const CSV_ONLY_SERIES = new Set(["CAPE"]);
+
+/**
  * Fetch all observations for a FRED series, oldest → newest.
  * Uses the keyed JSON API when FRED_API_KEY is set; falls back to the
  * public CSV endpoint if the API call fails (rate-limit, transient error,
- * invalid key, etc.).  This ensures data is always returned even when the
- * API key is temporarily unavailable.
+ * invalid key, etc.).  Series in CSV_ONLY_SERIES always use CSV.
  */
 export async function fetchFredCsv(seriesId: string): Promise<FredObservation[]> {
-  if (process.env.FRED_API_KEY) {
+  if (process.env.FRED_API_KEY && !CSV_ONLY_SERIES.has(seriesId)) {
     try {
       return await fetchFredApi(seriesId);
     } catch (err) {
@@ -93,7 +99,17 @@ export async function fetchFredCsv(seriesId: string): Promise<FredObservation[]>
       return fetchFredCsvRaw(seriesId);
     }
   }
-  return fetchFredCsvRaw(seriesId);
+  // CSV path (also used when FRED_API_KEY is not set)
+  try {
+    return await fetchFredCsvRaw(seriesId);
+  } catch (err) {
+    // Surface the real error so it appears in Vercel function logs
+    console.error(
+      `[FRED] CSV fetch failed for ${seriesId}: ` +
+      `${err instanceof Error ? err.message : String(err)}`
+    );
+    throw err;
+  }
 }
 
 /** Return the most recent observation from a FRED series, or null on error. */

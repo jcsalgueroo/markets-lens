@@ -130,14 +130,28 @@ export function GlobalMacroPanel({ data }: { data: GlobalSnapshot | null }) {
           status={usMacro.realYield10y.status}
           frequency="daily"
         />
-        <MacroRow
-          label="Shiller CAPE"
-          value={usMacro.shillerCape.value}
-          date={usMacro.shillerCape.date}
-          status={usMacro.shillerCape.status}
-          unit="×"
-          frequency="monthly"
-        />
+        {/* CAPE: show "checking source" rather than a red error dot when unavailable */}
+        {usMacro.shillerCape.value != null ? (
+          <MacroRow
+            label="Shiller CAPE"
+            value={usMacro.shillerCape.value}
+            date={usMacro.shillerCape.date}
+            status={usMacro.shillerCape.status}
+            unit="×"
+            frequency="monthly"
+          />
+        ) : (
+          <div className="flex items-center justify-between py-2.5 border-b border-slate-800/60 last:border-0">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 bg-amber-500" title="unavailable" />
+              <div>
+                <span className="text-slate-300 text-xs">Shiller CAPE</span>
+                <div className="text-[10px] text-slate-600 mt-0.5">monthly · FRED source checking</div>
+              </div>
+            </div>
+            <span className="text-slate-600 text-xs">—</span>
+          </div>
+        )}
       </div>
 
       {/* Euro Area */}

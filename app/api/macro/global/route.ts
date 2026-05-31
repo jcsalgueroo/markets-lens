@@ -206,6 +206,20 @@ export async function GET() {
       safeFred("CAPE"),
     ]);
 
+  // Explicit CAPE status log — this helps diagnose why CAPE shows null
+  if (cape.status === "error") {
+    console.error(
+      `[macro/global] FRED CAPE failed — shillerCape will be null. ` +
+      `Error: ${cape.error ?? "unknown"}. ` +
+      `CSV_ONLY path was used (API key bypassed for CAPE).`
+    );
+  } else {
+    console.log(
+      `[macro/global] CAPE ok: ${cape.value}× as of ${cape.date} ` +
+      `(${cape.history.length} history pts)`
+    );
+  }
+
   // Convert index levels → YoY % changes
   const cpi  = toYoY(cpiRaw,  12);  // monthly → 12-month lookback
   const pce  = toYoY(pceRaw,  12);

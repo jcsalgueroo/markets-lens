@@ -105,6 +105,47 @@ export async function blobWriteCurveHistory(snapshot: CurveSnapshot): Promise<vo
   });
 }
 
+/**
+ * Bulk-replace the curve history blob with a merged + sorted + trimmed
+ * list of snapshots.  Used by the backfill endpoint to write hundreds of
+ * historical entries in a single Blob PUT instead of one-by-one.
+ *
+ * Merges `incoming` with any existing snapshots (existing wins on date
+ * collision), sorts oldest→newest, and caps at MAX_CURVE_SNAPSHOTS.
+ */
+export async function blobBulkWriteCurveHistory(
+  incoming: CurveSnapshot[]
+): Promise<{ added: number; total: number }> {
+  const existing = await blobReadCurveHistory();
+  const existingMap = new Map((existing?.snapshots ?? []).map((s) => [s.date, s]));
+
+  // incoming only adds entries not already present
+  for (const s of incoming) {
+    if (!existingMap.has(s.date)) existingMap.set(s.date, s);
+  }
+
+  const merged = [...existingMap.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-MAX_CURVE_SNAPSHOTS);
+
+  const payload: CurveHistoryBlob = {
+    updatedAt: new Date().toISOString(),
+    snapshots: merged,
+  };
+
+  await put(CURVE_HISTORY_PATH, JSON.stringify(payload), {
+    access: "private",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+
+  return {
+    added: merged.length - (existing?.snapshots.length ?? 0),
+    total: merged.length,
+  };
+}
+
 /** Read the yield curve history blob.  Returns null if not yet written. */
 export async function blobReadCurveHistory(): Promise<CurveHistoryBlob | null> {
   try {
