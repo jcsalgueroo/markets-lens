@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchHistorical, computeReturn, computeYTD, sleep } from "@/lib/yahoo";
 import { fetchCreditYields } from "@/lib/valuation";
+import { fetchFredCsv } from "@/lib/fred";
 
 // ── Ticker registries ────────────────────────────────────────────────────────
 
@@ -149,25 +150,94 @@ export async function GET() {
     await sleep(200);
   }
 
-  // ── Derived spreads ───────────────────────────────────────────────────────
+  // ── Yahoo-sourced yields ──────────────────────────────────────────────────
   const irx = treasuryData.find((t) => t.ticker === "^IRX")?.yieldLevel ?? null;
   const tnx = treasuryData.find((t) => t.ticker === "^TNX")?.yieldLevel ?? null;
   const tyx = treasuryData.find((t) => t.ticker === "^TYX")?.yieldLevel ?? null;
   const fvx = treasuryData.find((t) => t.ticker === "^FVX")?.yieldLevel ?? null;
 
+  // ── FRED yield curve completion ───────────────────────────────────────────
+  // Yahoo Finance only has 4 treasury tickers; FRED fills the missing tenors.
+  // DGS2 is most critical — enables the true 2Y10Y spread.
+  // All FRED calls run in parallel; failures fall back to null (non-blocking).
+  const THREE_YEARS_AGO = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 3);
+    return d.toISOString().split("T")[0];
+  })();
+
+  const FRED_TENORS = [
+    { seriesId: "DGS6MO", tenor: "6M",  withHistory: false },
+    { seriesId: "DGS1",   tenor: "1Y",  withHistory: false },
+    { seriesId: "DGS2",   tenor: "2Y",  withHistory: true  }, // full 3Y history for charts
+    { seriesId: "DGS7",   tenor: "7Y",  withHistory: false },
+    { seriesId: "DGS20",  tenor: "20Y", withHistory: false },
+  ] as const;
+
+  type FredTenorKey = typeof FRED_TENORS[number]["tenor"];
+
+  const fredSettled = await Promise.allSettled(
+    FRED_TENORS.map(async ({ seriesId, tenor, withHistory }) => {
+      const obs = await fetchFredCsv(seriesId);
+      const latest = obs.at(-1);
+      const history = withHistory
+        ? obs
+            .filter((o) => o.date >= THREE_YEARS_AGO)
+            .map((o) => ({ date: o.date, yield: o.value }))
+        : [];
+      return { tenor, yield: latest?.value ?? null, history };
+    })
+  );
+
+  const fredData: Record<FredTenorKey, { yield: number | null; history: { date: string; yield: number }[] }> =
+    {} as Record<FredTenorKey, { yield: number | null; history: { date: string; yield: number }[] }>;
+
+  fredSettled.forEach((result, i) => {
+    const { tenor } = FRED_TENORS[i];
+    if (result.status === "fulfilled") {
+      fredData[tenor] = { yield: result.value.yield, history: result.value.history };
+    } else {
+      fredData[tenor] = { yield: null, history: [] };
+      console.log(`  ⚠️ FRED ${tenor} (${FRED_TENORS[i].seriesId}): ${String(result.reason).slice(0, 60)}`);
+    }
+  });
+
+  const dgs2 = fredData["2Y"]?.yield ?? null;
+
+  // ── Complete 9-point yield curve (ordered by maturity) ────────────────────
+  const TENOR_ORDER = ["3M", "6M", "1Y", "2Y", "5Y", "7Y", "10Y", "20Y", "30Y"] as const;
+  const yieldByTenor: Record<string, number | null> = {
+    "3M": irx, "5Y": fvx, "10Y": tnx, "30Y": tyx,
+    "6M":  fredData["6M"]?.yield  ?? null,
+    "1Y":  fredData["1Y"]?.yield  ?? null,
+    "2Y":  dgs2,
+    "7Y":  fredData["7Y"]?.yield  ?? null,
+    "20Y": fredData["20Y"]?.yield ?? null,
+  };
+
+  const yieldCurve = TENOR_ORDER.map((tenor) => ({
+    tenor,
+    yield: yieldByTenor[tenor] ?? null,
+  }));
+
+  // ── Derived spreads ───────────────────────────────────────────────────────
   const spreads: SpreadSnapshot[] = [
-    {
-      value: computeSpread(tnx, irx),
-      label: "2Y10Y Spread (proxy: 3M10Y)",
-      description:
-        "10Y minus 3M T-Bill yield. Negative = inverted curve (recession signal). " +
-        "Note: spec calls for 2Y tenor but ^IRX (3M) is the shortest available on Yahoo Finance; " +
-        "2Y yield fetched from FRED in Step 6.",
-    },
+    // 2Y10Y — the primary recession signal; use true 2Y if available
+    dgs2 != null
+      ? {
+          value: computeSpread(tnx, dgs2),
+          label: "2Y10Y Spread",
+          description: "10Y minus 2Y Treasury yield. The primary yield-curve recession signal. Source: FRED DGS2.",
+        }
+      : {
+          value: computeSpread(tnx, irx),
+          label: "2Y10Y Spread (proxy: 3M10Y)",
+          description: "10Y minus 3M T-Bill. Using 3M proxy — FRED 2Y temporarily unavailable.",
+        },
     {
       value: computeSpread(tyx, fvx),
       label: "5Y30Y Spread",
-      description: "30Y minus 5Y yield. Curve steepness signal.",
+      description: "30Y minus 5Y yield. Long-end steepness signal.",
     },
     {
       value: computeSpread(tyx, tnx),
@@ -177,9 +247,6 @@ export async function GET() {
   ];
 
   // ── HY-IG credit spread proxy ─────────────────────────────────────────────
-  // True HY-IG spread requires option-adjusted spread (OAS) data from FRED or Bloomberg.
-  // Here we compute a price-return differential as a directional proxy.
-  // The actual OAS spread will be populated from FRED in Step 6.
   const hyg = creditData.find((c) => c.ticker === "HYG");
   const lqd = creditData.find((c) => c.ticker === "LQD");
   const hygLqdReturnDiff1M =
@@ -187,25 +254,24 @@ export async function GET() {
       ? hyg.returns["1M"] - lqd.returns["1M"]
       : null;
 
-  // ── Yield curve snapshot (for curve chart: current tenors) ────────────────
-  const yieldCurve = [
-    { tenor: "3M", yield: irx },
-    { tenor: "5Y", yield: fvx },
-    { tenor: "10Y", yield: tnx },
-    { tenor: "30Y", yield: tyx },
-  ];
-
   // ── Server log ────────────────────────────────────────────────────────────
   console.log("\n══ MarketLens /api/fixed-income ══════════════════════════");
-  console.log("  Treasury yields:");
+  console.log("  Yahoo treasury yields:");
   treasuryData.forEach((t) => {
     const flag = t.dataStatus === "ok" ? "✅" : "❌";
     console.log(`    ${flag} ${t.ticker.padEnd(6)} ${t.yieldLevel?.toFixed(3) ?? "null"}%  ${t.label}`);
   });
+  console.log("  FRED curve completions:");
+  FRED_TENORS.forEach(({ tenor, seriesId }) => {
+    const d = fredData[tenor];
+    const flag = d?.yield != null ? "✅" : "⚠️";
+    console.log(`    ${flag} ${tenor.padEnd(4)} ${d?.yield?.toFixed(3) ?? "null"}%  ${seriesId}  hist=${d?.history.length ?? 0}`);
+  });
+  console.log(`  Yield curve: ${yieldCurve.map((p) => `${p.tenor}=${p.yield?.toFixed(2) ?? "—"}`).join(" | ")}`);
   console.log("  Credit ETFs:");
   creditData.forEach((c) => {
     const flag = c.dataStatus === "ok" ? "✅" : "❌";
-    console.log(`    ${flag} ${c.ticker.padEnd(5)} $${c.price?.toFixed(2) ?? "null"}  history=${c.history.length}w  ${c.label}`);
+    console.log(`    ${flag} ${c.ticker.padEnd(5)} $${c.price?.toFixed(2) ?? "null"}  hist=${c.history.length}w  ${c.label}`);
   });
   console.log("  Spreads:");
   spreads.forEach((s) => {
@@ -220,16 +286,12 @@ export async function GET() {
     creditEtfs: creditData,
     yieldCurve,
     spreads,
+    // fredData carries DGS2 history for the cron to extract into the blob
+    fredTenors: fredData,
     _meta: {
       hygLqdReturnDiff1M,
-      notes: [
-        "Treasury yields are level readings (e.g. 4.45 = 4.45%), not prices",
-        "Return fields on treasuries represent yield change in pp terms (same arithmetic)",
-        "3M T-Bill (^IRX) used as short-end proxy — true 2Y yield from FRED in Step 6",
-        "HY-IG price-return diff is directional only; OAS spread from FRED in Step 6",
-        "Credit ETF impliedYield=null until Step 10 (quoteSummary valuation fetch)",
-        "Credit history thinned to weekly (every 5th bar) for storage efficiency",
-      ],
+      yieldCurvePoints: yieldCurve.filter((p) => p.yield != null).length,
+      dgs2Source: dgs2 != null ? "FRED DGS2" : "unavailable",
     },
   });
 }

@@ -50,10 +50,19 @@ function LabeledDot({ cx = 0, cy = 0, payload, fill }: DotProps) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isInverted(curve: CurvePoint[]): boolean {
-  const shortEnd = curve.find((p) => p.tenor === "3M")?.yield ?? null;
+function isInverted(curve: CurvePoint[]): { inverted: boolean; basis: string } {
+  // Prefer 2Y10Y (canonical recession indicator); fall back to 3M10Y
+  const twoYear  = curve.find((p) => p.tenor === "2Y")?.yield  ?? null;
+  const threeMonth = curve.find((p) => p.tenor === "3M")?.yield ?? null;
   const longEnd  = curve.find((p) => p.tenor === "10Y")?.yield ?? null;
-  return shortEnd != null && longEnd != null && shortEnd > longEnd;
+
+  if (twoYear != null && longEnd != null) {
+    return { inverted: twoYear > longEnd, basis: "2Y10Y" };
+  }
+  if (threeMonth != null && longEnd != null) {
+    return { inverted: threeMonth > longEnd, basis: "3M10Y" };
+  }
+  return { inverted: false, basis: "" };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -71,7 +80,7 @@ export function YieldCurveChart({ curve, asOf }: Props) {
     );
   }
 
-  const inverted = isInverted(curve);
+  const { inverted, basis } = isInverted(curve);
   const areaColor = inverted ? "#f87171" : "#38bdf8"; // red if inverted, sky if normal
   const gradientId = inverted ? "curveInverted" : "curveNormal";
 
@@ -89,11 +98,11 @@ export function YieldCurveChart({ curve, asOf }: Props) {
         </p>
         {inverted ? (
           <span className="text-[9px] text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded px-1.5 py-0.5 uppercase tracking-wide font-medium">
-            Inverted
+            Inverted {basis && `(${basis})`}
           </span>
         ) : (
           <span className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5 uppercase tracking-wide font-medium">
-            Normal slope
+            Normal slope {basis && `(${basis})`}
           </span>
         )}
       </div>
@@ -164,7 +173,7 @@ export function YieldCurveChart({ curve, asOf }: Props) {
       </ResponsiveContainer>
 
       <p className="text-[9px] text-slate-700 px-2 pt-1">
-        US Treasury yields · 3M / 5Y / 10Y / 30Y
+        US Treasury yields · 9 tenors (3M–30Y) · Yahoo Finance + FRED
         {asOf ? ` · as of ${new Date(asOf).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}` : ""}
       </p>
     </div>

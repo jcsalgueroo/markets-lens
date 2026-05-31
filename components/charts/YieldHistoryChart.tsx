@@ -21,8 +21,9 @@ import {
 } from "./useHistoryData";
 
 const TREASURY_SERIES = [
-  { id: "^IRX", label: "3M T-Bill",  color: "#fbbf24" }, // amber
-  { id: "^FVX", label: "5Y Treasury", color: "#a78bfa" }, // violet
+  { id: "^IRX", label: "3M T-Bill",    color: "#fbbf24" }, // amber
+  { id: "DGS2", label: "2Y Treasury",  color: "#4ade80" }, // green  (FRED DGS2)
+  { id: "^FVX", label: "5Y Treasury",  color: "#a78bfa" }, // violet
   { id: "^TNX", label: "10Y Treasury", color: "#38bdf8" }, // sky
   { id: "^TYX", label: "30Y Treasury", color: "#34d399" }, // emerald
 ];
@@ -160,7 +161,7 @@ export function YieldHistoryChart({ defaultTimeframe = "1Y" }: { defaultTimefram
         </LineChart>
       </ResponsiveContainer>
       <p className="text-[9px] text-slate-700 px-2 pt-1">
-        Yield level in % · daily data · 3Y history
+        Yield level in % · 3M/5Y/10Y/30Y: Yahoo Finance · 2Y: FRED DGS2 (daily)
       </p>
     </div>
   );

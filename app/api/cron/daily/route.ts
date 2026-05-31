@@ -42,6 +42,8 @@ function toSeries(arr: unknown): HistoryPoint[] {
 function extractFixedIncomeHistory(data: unknown): HistorySeries {
   const d = data as Record<string, unknown>;
   const series: HistorySeries = {};
+
+  // Yahoo Finance treasury history (4 tickers: ^IRX, ^FVX, ^TNX, ^TYX)
   const treasuries = (d.treasuries as unknown[]) ?? [];
   for (const t of treasuries) {
     const entry = t as { ticker: string; history?: { date: string; yield: number }[] };
@@ -49,6 +51,15 @@ function extractFixedIncomeHistory(data: unknown): HistorySeries {
       series[entry.ticker] = entry.history.map((p) => ({ date: p.date, value: p.yield }));
     }
   }
+
+  // FRED 2Y Treasury history (DGS2) — stored in fredTenors["2Y"].history
+  const fredTenors = (d.fredTenors as Record<string, { yield: number | null; history: { date: string; yield: number }[] }>) ?? {};
+  const dgs2History = fredTenors["2Y"]?.history ?? [];
+  if (dgs2History.length > 0) {
+    series["DGS2"] = dgs2History.map((p) => ({ date: p.date, value: p.yield }));
+  }
+
+  // Credit ETF price history (weekly)
   const creditEtfs = (d.creditEtfs as unknown[]) ?? [];
   for (const c of creditEtfs) {
     const entry = c as { ticker: string; history?: { date: string; price: number }[] };
