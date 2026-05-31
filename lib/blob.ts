@@ -50,12 +50,8 @@ export async function blobWriteHistory(
       Object.entries(series).map(([k, v]) => [k, trim(v)])
     ),
   };
-  // Public access: history blobs contain non-sensitive public market data
-  // (FRED macro series, Yahoo Finance prices).  Public blobs are directly
-  // fetchable by URL without a signed token, which is required for the
-  // server-side blobReadHistory fetch to work correctly.
   const blob = await put(`history/${dataset}.json`, JSON.stringify(payload), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     addRandomSuffix: false,
     allowOverwrite: true,
@@ -76,10 +72,13 @@ export async function blobReadHistory(
       limit: 1,
     });
     if (!blobs.length) return null;
-    const res = await fetch(blobs[0].url, {
+
+    // For private stores, blobs[0].url requires a signed token that a plain
+    // fetch() doesn't send — it returns 401.  blobs[0].downloadUrl is the
+    // pre-signed URL emitted by list() that IS directly fetchable without
+    // additional auth headers, even for private stores.
+    const res = await fetch(blobs[0].downloadUrl, {
       signal: AbortSignal.timeout(8_000),
-      // bust CDN cache so we always get the latest write
-      headers: { "Cache-Control": "no-cache" },
     });
     if (!res.ok) return null;
     return res.json() as Promise<HistoryBlob>;
