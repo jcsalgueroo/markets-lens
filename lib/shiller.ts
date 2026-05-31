@@ -10,14 +10,37 @@ import * as XLSX from "xlsx";
 
 export type ShillerObs = { date: string; value: number };
 
+// shillerdata.com is the actively-maintained mirror of Shiller's IE data.
+// Yale's own ie_data.xls has been static since Sep 2023; shillerdata.com
+// updates monthly and is the source behind the public download button.
+const SHILLER_URLS = [
+  // Primary: shillerdata.com (current, updated monthly)
+  "https://img1.wsimg.com/blobby/go/e5e77e0b-59d1-44d9-ab25-4763ac982e53/downloads/441f0d2c-37e4-4803-b4e2-8fe10407fbf6/ie_data.xls",
+  // Fallback: Yale's own server (may be stale)
+  "http://www.econ.yale.edu/~shiller/data/ie_data.xls",
+];
+
 export async function fetchShillerCapeYale(): Promise<ShillerObs[]> {
-  const url = "http://www.econ.yale.edu/~shiller/data/ie_data.xls";
+  let lastError = "no URLs tried";
+  for (const url of SHILLER_URLS) {
+    try {
+      const result = await fetchAndParseShillerXls(url);
+      if (result.length > 0) return result;
+      lastError = `${url}: parsed 0 observations`;
+    } catch (e) {
+      lastError = `${url}: ${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  throw new Error(lastError);
+}
+
+async function fetchAndParseShillerXls(url: string): Promise<ShillerObs[]> {
   const res = await fetch(url, {
     signal: AbortSignal.timeout(20_000),
     headers: { "User-Agent": "MarketLens/1.0" },
     cache: "no-store",
   });
-  if (!res.ok) throw new Error(`Yale Shiller XLS HTTP ${res.status}`);
+  if (!res.ok) throw new Error(`Shiller XLS HTTP ${res.status}`);
 
   const buf = await res.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
