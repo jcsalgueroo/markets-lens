@@ -88,7 +88,7 @@ export function YieldHistoryChart({ defaultTimeframe = "1Y" }: { defaultTimefram
 
   return (
     <div className="p-4">
-      <div className="flex justify-end gap-1 mb-3">
+      <div className="flex justify-end gap-1 mb-3 print:hidden">
         {TIMEFRAMES.map((t) => (
           <button
             key={t.label}

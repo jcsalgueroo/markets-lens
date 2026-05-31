@@ -1,1 +1,46 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
+
+/* ── Print / PDF export styles ─────────────────────────────────────────────── */
+
+@media print {
+  /* Page setup */
+  @page {
+    size: A4 landscape;
+    margin: 12mm 14mm;
+  }
+
+  /* Force background color + text rendering */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove browser default link underlining */
+  a { text-decoration: none !important; }
+
+  /* Strip sticky/fixed positioning so the header flows normally */
+  header {
+    position: static !important;
+  }
+
+  /* Prevent orphaned section cards across page breaks */
+  .section-card-print {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Each tab panel starts on a new page (except the first) */
+  .tab-panel-print + .tab-panel-print {
+    break-before: page;
+    page-break-before: page;
+  }
+
+  /* Keep chart containers from clipping SVG content */
+  .recharts-wrapper,
+  .recharts-surface {
+    overflow: visible !important;
+  }
+
+  /* Suppress scrollbars that appear as border artefacts */
+  ::-webkit-scrollbar { display: none; }
+}

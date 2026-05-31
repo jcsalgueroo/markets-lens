@@ -19,6 +19,7 @@ import { CommoditiesHistoryChart } from "@/components/charts/CommoditiesHistoryC
 import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
 import { GlobalMacroChart } from "@/components/charts/GlobalMacroChart";
 import { YieldCurveChart } from "@/components/charts/YieldCurveChart";
+import { PrintButton } from "@/components/ui/PrintButton";
 
 import type {
   EquitiesSnapshot,
@@ -440,17 +441,20 @@ export default async function Dashboard() {
               Professional Macro Dashboard
             </span>
           </div>
-          <div className="text-slate-500 text-[11px] tabular-nums text-right">
-            {asOf ? (
-              <>
-                <span className="text-slate-400">Refreshed </span>
-                {fmtDate(asOf)}
-              </>
-            ) : (
-              <span className="text-amber-600">
-                Awaiting first data refresh — cron runs weekdays 06:00 UTC
-              </span>
-            )}
+          <div className="flex items-center gap-3">
+            <PrintButton />
+            <div className="text-slate-500 text-[11px] tabular-nums text-right">
+              {asOf ? (
+                <>
+                  <span className="text-slate-400">Refreshed </span>
+                  {fmtDate(asOf)}
+                </>
+              ) : (
+                <span className="text-amber-600">
+                  Awaiting first data refresh — cron runs weekdays 06:00 UTC
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
