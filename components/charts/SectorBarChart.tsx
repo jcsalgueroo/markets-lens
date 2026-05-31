@@ -47,19 +47,28 @@ export function SectorBarChart({ rows, spRow }: Props) {
   const data = useMemo(() => {
     const spBenchmark = spRow?.returns[period] ?? null;
 
-    return rows
+    const sectorBars = rows
       .filter((r) => r.returns[period] != null && r.dataStatus !== "error")
       .map((r) => {
-        const raw    = r.returns[period]!;
-        const value  = mode === "rel" && spBenchmark != null
+        const raw   = r.returns[period]!;
+        const value = mode === "rel" && spBenchmark != null
           ? parseFloat((raw - spBenchmark).toFixed(2))
           : parseFloat(raw.toFixed(2));
-        return {
-          name:  SHORT_NAMES[r.label] ?? r.label,
-          value,
-        };
+        return { name: SHORT_NAMES[r.label] ?? r.label, value, isBenchmark: false };
       })
       .sort((a, b) => b.value - a.value);
+
+    // Always append the S&P 500 bar at the bottom for direct comparison.
+    // In relative mode it shows 0 (by definition); in absolute mode its actual return.
+    if (spRow?.returns[period] != null) {
+      sectorBars.push({
+        name: "S&P 500",
+        value: mode === "rel" ? 0 : parseFloat(spRow.returns[period]!.toFixed(2)),
+        isBenchmark: true,
+      });
+    }
+
+    return sectorBars;
   }, [rows, period, mode, spRow]);
 
   if (data.length === 0) {
@@ -114,7 +123,7 @@ export function SectorBarChart({ rows, spRow }: Props) {
         Sector {period} Returns — {modeLabel}
       </p>
 
-      <ResponsiveContainer width="100%" height={320}>
+      <ResponsiveContainer width="100%" height={360}>
         <BarChart
           data={data}
           layout="vertical"
@@ -131,7 +140,23 @@ export function SectorBarChart({ rows, spRow }: Props) {
             type="category"
             dataKey="name"
             width={76}
-            tick={{ fontSize: 9, fill: "#94a3b8" }}
+            tick={(props) => {
+              const { x, y, payload } = props as { x: number; y: number; payload: { value: string } };
+              const isSP = payload.value === "S&P 500";
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  dy={3}
+                  textAnchor="end"
+                  fontSize={9}
+                  fontWeight={isSP ? 600 : 400}
+                  fill={isSP ? "#38bdf8" : "#94a3b8"}
+                >
+                  {payload.value}
+                </text>
+              );
+            }}
             tickLine={false}
             axisLine={false}
           />
@@ -157,8 +182,12 @@ export function SectorBarChart({ rows, spRow }: Props) {
             {data.map((entry) => (
               <Cell
                 key={entry.name}
-                fill={entry.value >= 0 ? "#34d399" : "#f87171"}
-                fillOpacity={0.85}
+                fill={
+                  entry.isBenchmark
+                    ? "#38bdf8"                                   // sky-400 for S&P 500
+                    : entry.value >= 0 ? "#34d399" : "#f87171"   // emerald / rose for sectors
+                }
+                fillOpacity={entry.isBenchmark ? 0.6 : 0.85}
               />
             ))}
           </Bar>
