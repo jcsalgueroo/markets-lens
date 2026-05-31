@@ -313,6 +313,23 @@ const DXY_SERIES = [
   { id: "DXY", label: "DXY — US Dollar Index", color: "#34d399", format: "index" as const }, // emerald
 ];
 
+const GDP_SERIES = [
+  { id: "GDP", label: "US Real GDP YoY %", color: "#34d399", format: "pct" as const }, // emerald
+];
+
+// Key countries for the CLI chart — US, OECD Total, Colombia, China
+// Series IDs match CLI_{COUNTRY} keys written by extractGlobalHistory
+const CLI_SERIES = [
+  { id: "CLI_USA", label: "United States", color: "#38bdf8", format: "index" as const }, // sky
+  { id: "CLI_OEC", label: "OECD Total",    color: "#94a3b8", format: "index" as const }, // slate
+  { id: "CLI_COL", label: "Colombia",      color: "#fbbf24", format: "index" as const }, // amber
+  { id: "CLI_CHN", label: "China",         color: "#f87171", format: "index" as const }, // rose
+];
+
+const CLI_REFERENCE_LINES = [
+  { y: 100, label: "Trend  100", color: "#475569", dashed: true },
+];
+
 function MacroTab({
   colombia,
   global,
@@ -337,12 +354,36 @@ function MacroTab({
         </SectionCard>
       </div>
 
-      <SectionCard title="DXY — US Dollar Index">
+      {/* GDP growth + DXY side by side */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="US Real GDP — YoY Growth">
+          <GlobalMacroChart
+            seriesDefs={GDP_SERIES}
+            defaultTimeframe="3Y"
+            height={220}
+            zeroLine
+            note="US Real GDP quarterly YoY % growth · Source: FRED GDP"
+          />
+        </SectionCard>
+        <SectionCard title="DXY — US Dollar Index">
+          <GlobalMacroChart
+            seriesDefs={DXY_SERIES}
+            defaultTimeframe="3Y"
+            height={220}
+            yAxisDomain={["auto", "auto"]}
+          />
+        </SectionCard>
+      </div>
+
+      {/* OECD Composite Leading Indicators */}
+      <SectionCard title="OECD Composite Leading Indicators">
         <GlobalMacroChart
-          seriesDefs={DXY_SERIES}
+          seriesDefs={CLI_SERIES}
           defaultTimeframe="3Y"
-          height={220}
+          height={260}
+          referenceLines={CLI_REFERENCE_LINES}
           yAxisDomain={["auto", "auto"]}
+          note="CLI index ≈ 100 = long-run trend growth rate · &gt;100 above-trend expansion · &lt;100 below-trend contraction · Source: FRED / OECD (LOLITONOSTSAM) · monthly"
         />
       </SectionCard>
 

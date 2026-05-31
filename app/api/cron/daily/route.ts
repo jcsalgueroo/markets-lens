@@ -108,24 +108,40 @@ function extractColombiaHistory(data: unknown): HistorySeries {
 
 function extractGlobalHistory(data: unknown): HistorySeries {
   const d = data as Record<string, unknown>;
-  const us = (d.usMacro as Record<string, unknown>) ?? {};
+  const us  = (d.usMacro as Record<string, unknown>) ?? {};
   const eur = (d.eurArea as Record<string, unknown>) ?? {};
-  const dxy = (d.dxy as Record<string, unknown>) ?? {};
-  return {
+  const dxy = (d.dxy    as Record<string, unknown>) ?? {};
+
+  const series: HistorySeries = {
     "DXY":        toSeries(dxy.history),
-    "CPI":        toSeries((us.cpi as Record<string, unknown>)?.history),
-    "CorePCE":    toSeries((us.corePce as Record<string, unknown>)?.history),
-    "GDP":        toSeries((us.gdp as Record<string, unknown>)?.history),
+    "CPI":        toSeries((us.cpi         as Record<string, unknown>)?.history),
+    "CorePCE":    toSeries((us.corePce     as Record<string, unknown>)?.history),
+    "GDP":        toSeries((us.gdp         as Record<string, unknown>)?.history),
     "UNRATE":     toSeries((us.unemployment as Record<string, unknown>)?.history),
     "FEDFUNDS":   toSeries((us.fedFundsRate as Record<string, unknown>)?.history),
     "T10YIE":     toSeries((us.breakeven10y as Record<string, unknown>)?.history),
     "DFII10":     toSeries((us.realYield10y as Record<string, unknown>)?.history),
-    "CAPE":       toSeries((us.shillerCape as Record<string, unknown>)?.history),
-    "ECB_HICP":   toSeries((eur.hicp as Record<string, unknown>)?.history),
-    "ECB_GDP":    toSeries((eur.gdp as Record<string, unknown>)?.history),
+    "CAPE":       toSeries((us.shillerCape  as Record<string, unknown>)?.history),
+    "ECB_HICP":   toSeries((eur.hicp        as Record<string, unknown>)?.history),
+    "ECB_GDP":    toSeries((eur.gdp         as Record<string, unknown>)?.history),
     "ECB_DFR":    toSeries((eur.depositRate as Record<string, unknown>)?.history),
     "ECB_MRRFR":  toSeries((eur.mainRefiRate as Record<string, unknown>)?.history),
   };
+
+  // ── OECD Composite Leading Indicators ──────────────────────────────────────
+  // The CLI array contains one entry per country with its full history.
+  // Extract each country as CLI_{COUNTRY_CODE} so chart components can
+  // select any subset without pulling the whole blob.
+  const oecd = (d.oecd as Record<string, unknown>) ?? {};
+  const cliArr = (oecd.cli as Array<Record<string, unknown>>) ?? [];
+  for (const entry of cliArr) {
+    const country = String(entry.country ?? "");
+    if (country) {
+      series[`CLI_${country}`] = toSeries(entry.history);
+    }
+  }
+
+  return series;
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
