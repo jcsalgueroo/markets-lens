@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchHistorical, computeReturn, computeYTD, sleep } from "@/lib/yahoo";
+import { fetchCreditYields } from "@/lib/valuation";
 
 // ── Ticker registries ────────────────────────────────────────────────────────
 
@@ -72,9 +73,9 @@ type CreditEntry = {
   label: string;
   price: number | null;
   returns: ReturnPeriods;
-  // Implied yield approximated from 30-day SEC yield proxy:
-  // Not fetched here — requires quoteSummary (Step 10). Flagged null for now.
-  impliedYield: null;
+  // Distribution yield in % from Yahoo Finance quoteSummary (Step 10).
+  // e.g. 5.82 means 5.82%. null when unavailable.
+  impliedYield: number | null;
   history: { date: string; price: number }[];   // weekly series for spread charts
   dataStatus: "ok" | "error";
   error?: string;
@@ -117,6 +118,9 @@ export async function GET() {
     await sleep(200);
   }
 
+  // ── Fetch credit implied yields (quoteSummary) ───────────────────────────
+  const creditYields = await fetchCreditYields();
+
   // ── Fetch Credit ETFs ─────────────────────────────────────────────────────
   const creditData: CreditEntry[] = [];
   for (const { ticker, label } of CREDIT_ETFS) {
@@ -132,11 +136,12 @@ export async function GET() {
       const weeklyHistory = hist.dates
         .map((d, i) => ({ date: d, price: hist.closes[i] }))
         .filter((_, i) => i % 5 === 0 || i === hist.closes.length - 1);
+      const rawYield = creditYields[ticker as keyof typeof creditYields] ?? null;
       creditData.push({
         ticker, label,
         price: hist.closes.at(-1) ?? null,
         returns: computePeriods(hist.dates, hist.closes),
-        impliedYield: null,   // populated in Step 10 (quoteSummary valuation fetch)
+        impliedYield: rawYield != null ? rawYield * 100 : null, // stored as % (e.g. 5.82)
         history: weeklyHistory,
         dataStatus: "ok",
       });
