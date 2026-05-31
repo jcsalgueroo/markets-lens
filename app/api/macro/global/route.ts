@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchFredCsv } from "@/lib/fred";
+import { fetchShillerCapeYale } from "@/lib/shiller";
 import { default as YF } from "yahoo-finance2";
 
 const yf = new YF({ suppressNotices: ["yahooSurvey", "ripHistorical"] });
@@ -185,6 +186,42 @@ function toYoY(raw: SafeFredResult, lookback = 12): SafeFredResult {
   return { value: latest?.value ?? null, date: latest?.date ?? null, history: yoyHist, status: "ok" };
 }
 
+// ── Shiller CAPE (FRED → Yale fallback) ──────────────────────────────────────
+
+type SafeFredReturn = {
+  value: number | null;
+  date: string | null;
+  history: { date: string; value: number }[];
+  status: "ok" | "error";
+  error?: string;
+};
+
+async function fetchCape(): Promise<SafeFredReturn> {
+  // Try FRED first — it carries the CAPE series when available
+  const fredResult = await safeFred("CAPE");
+  if (fredResult.status === "ok" && fredResult.history.length > 0) {
+    return fredResult;
+  }
+
+  // FRED returned empty or errored — fall back to Robert Shiller's Yale dataset
+  try {
+    const obs = await fetchShillerCapeYale();
+    if (!obs.length) throw new Error("Yale dataset returned no rows");
+    const latest = obs.at(-1)!;
+    return { value: latest.value, date: latest.date, history: obs, status: "ok" };
+  } catch (yaleErr) {
+    const fredMsg = fredResult.error ?? "empty";
+    const yaleMsg = yaleErr instanceof Error ? yaleErr.message : String(yaleErr);
+    return {
+      value: null,
+      date: null,
+      history: [],
+      status: "error",
+      error: `FRED: ${fredMsg} | Yale: ${yaleMsg}`,
+    };
+  }
+}
+
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 export const revalidate = 3600; // 1 h
@@ -203,7 +240,7 @@ export async function GET() {
       safeFred("FEDFUNDS", { thinned: true }),
       safeFred("T10YIE", { thinned: true }),
       safeFred("DFII10", { thinned: true }),
-      safeFred("CAPE"),
+      fetchCape(),
     ]);
 
   // Convert index levels → YoY % changes
