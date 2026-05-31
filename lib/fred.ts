@@ -74,12 +74,8 @@ async function fetchFredCsvRaw(seriesId: string): Promise<FredObservation[]> {
 
 // ── Public interface ──────────────────────────────────────────────────────────
 
-/**
- * Some FRED series are contributed data (e.g. Robert Shiller's CAPE)
- * and may not be accessible through the keyed JSON API even with a valid key.
- * Forcing these to the public CSV endpoint avoids silent API failures.
- */
-const CSV_ONLY_SERIES = new Set(["CAPE"]);
+// No series are forced CSV-only at this time — reverted after CAPE diagnosis
+const CSV_ONLY_SERIES = new Set<string>();
 
 /**
  * Fetch all observations for a FRED series, oldest → newest.

@@ -193,8 +193,8 @@ export const maxDuration = 60;
 export async function GET() {
   const errors: string[] = [];
 
-  // ── US macro (FRED public CSV) ────────────────────────────────────────────
-  const [cpiRaw, pceRaw, gdpRaw, unrate, fedFunds, t10yie, dfii10, cape] =
+  // ── US macro (FRED) ──────────────────────────────────────────────────────
+  const [cpiRaw, pceRaw, gdpRaw, unrate, fedFunds, t10yie, dfii10] =
     await Promise.all([
       safeFred("CPIAUCSL"),
       safeFred("PCEPILFE"),
@@ -203,22 +203,70 @@ export async function GET() {
       safeFred("FEDFUNDS", { thinned: true }),
       safeFred("T10YIE", { thinned: true }),
       safeFred("DFII10", { thinned: true }),
-      safeFred("CAPE"),
     ]);
 
-  // Explicit CAPE status log — this helps diagnose why CAPE shows null
-  if (cape.status === "error") {
-    console.error(
-      `[macro/global] FRED CAPE failed — shillerCape will be null. ` +
-      `Error: ${cape.error ?? "unknown"}. ` +
-      `CSV_ONLY path was used (API key bypassed for CAPE).`
-    );
-  } else {
-    console.log(
-      `[macro/global] CAPE ok: ${cape.value}× as of ${cape.date} ` +
-      `(${cape.history.length} history pts)`
-    );
-  }
+  // ── CAPE: diagnostic fetch — tries API key then CSV, logs raw responses ───
+  // Both attempt results are stored in capeDebug so the error is visible in
+  // /api/macro/global response under meta.capeDebug without needing Vercel logs.
+  const capeDebug: Record<string, string> = {};
+  const cape = await (async (): Promise<SafeFredResult> => {
+    const fredKey = process.env.FRED_API_KEY;
+
+    // Attempt 1 — JSON API with key
+    if (fredKey) {
+      try {
+        const apiUrl =
+          `https://api.stlouisfed.org/fred/series/observations` +
+          `?series_id=CAPE&api_key=${encodeURIComponent(fredKey)}&file_type=json&sort_order=asc`;
+        const res = await fetch(apiUrl, { signal: AbortSignal.timeout(15_000) });
+        const body = await res.text();
+        capeDebug.apiStatus = String(res.status);
+        capeDebug.apiBodyPreview = body.slice(0, 300);
+        if (res.ok) {
+          const json = JSON.parse(body) as { observations?: Array<{date:string;value:string}>; error_code?: number; error_message?: string };
+          if (!json.error_code) {
+            const obs = (json.observations ?? [])
+              .filter((o) => o.value !== "." && o.date)
+              .map((o) => ({ date: o.date, value: parseFloat(o.value) }))
+              .filter((o) => !isNaN(o.value));
+            if (obs.length) {
+              capeDebug.apiResult = `ok — ${obs.length} obs, latest ${obs.at(-1)?.value}× on ${obs.at(-1)?.date}`;
+              return { value: obs.at(-1)!.value, date: obs.at(-1)!.date, history: obs, status: "ok" };
+            }
+            capeDebug.apiResult = "empty observations array";
+          } else {
+            capeDebug.apiResult = `error_code=${json.error_code}: ${json.error_message}`;
+          }
+        }
+      } catch (e) {
+        capeDebug.apiException = String(e);
+      }
+    } else {
+      capeDebug.apiResult = "no FRED_API_KEY set";
+    }
+
+    // Attempt 2 — public CSV fallback
+    try {
+      const csvUrl = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=CAPE`;
+      const res = await fetch(csvUrl, { signal: AbortSignal.timeout(15_000), headers: { "User-Agent": "MarketLens/1.0" } });
+      const body = await res.text();
+      capeDebug.csvStatus = String(res.status);
+      capeDebug.csvBodyPreview = body.slice(0, 300);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const obs = body.trim().split("\n").slice(1)
+        .map((l) => { const [d, v] = l.split(","); return { date: d?.trim() ?? "", value: parseFloat(v ?? "") }; })
+        .filter((o) => o.date && !isNaN(o.value));
+      capeDebug.csvResult = obs.length ? `ok — ${obs.length} obs, latest ${obs.at(-1)?.value}× on ${obs.at(-1)?.date}` : "empty CSV";
+      if (obs.length) return { value: obs.at(-1)!.value, date: obs.at(-1)!.date, history: obs, status: "ok" };
+    } catch (e) {
+      capeDebug.csvException = String(e);
+    }
+
+    capeDebug.final = "all attempts failed — returning null";
+    return { value: null, date: null, history: [], status: "error", error: JSON.stringify(capeDebug) };
+  })();
+
+  console.log("[macro/global] CAPE diagnostic:", JSON.stringify(capeDebug));
 
   // Convert index levels → YoY % changes
   const cpi  = toYoY(cpiRaw,  12);  // monthly → 12-month lookback
@@ -422,6 +470,7 @@ export async function GET() {
       fetchedAt: new Date().toISOString(),
       fredKeyPresent: !!process.env.FRED_API_KEY,
       errors: errors.length ? errors : undefined,
+      capeDebug,  // visible at /api/macro/global → meta.capeDebug
     },
   });
 }
