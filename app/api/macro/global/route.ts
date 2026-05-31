@@ -199,26 +199,29 @@ type SafeFredReturn = {
 const CAPE_STALE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 async function fetchCape(): Promise<SafeFredReturn> {
-  // Try FRED first — it carried the CAPE series until ~2023 when it was removed.
-  // Guard against stale Next.js data-cache responses: if the latest observation is
-  // more than 90 days old the series is effectively gone and we skip to Yale.
   const fredResult = await safeFred("CAPE");
   const fredIsFresh =
     fredResult.status === "ok" &&
     fredResult.history.length > 0 &&
     fredResult.date != null &&
     Date.now() - new Date(fredResult.date).getTime() < CAPE_STALE_MS;
+
+  console.log(`[CAPE] FRED: status=${fredResult.status} pts=${fredResult.history.length} date=${fredResult.date ?? "null"} fresh=${fredIsFresh}`);
+
   if (fredIsFresh) return fredResult;
 
-  // FRED returned empty or errored — fall back to Robert Shiller's Yale dataset
+  // FRED returned empty or stale — fall back to Robert Shiller's Yale dataset
   try {
+    console.log("[CAPE] trying Yale fallback...");
     const obs = await fetchShillerCapeYale();
     if (!obs.length) throw new Error("Yale dataset returned no rows");
     const latest = obs.at(-1)!;
+    console.log(`[CAPE] Yale OK: ${obs.length} pts, latest=${latest.date} val=${latest.value.toFixed(1)}`);
     return { value: latest.value, date: latest.date, history: obs, status: "ok" };
   } catch (yaleErr) {
     const fredMsg = fredResult.error ?? "empty";
     const yaleMsg = yaleErr instanceof Error ? yaleErr.message : String(yaleErr);
+    console.error(`[CAPE] Yale FAILED: ${yaleMsg}`);
     return {
       value: null,
       date: null,
@@ -231,7 +234,7 @@ async function fetchCape(): Promise<SafeFredReturn> {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
-export const revalidate = 3600; // 1 h
+export const dynamic = "force-dynamic"; // always run live — called only by cron, not browser
 export const maxDuration = 60;
 
 export async function GET() {
