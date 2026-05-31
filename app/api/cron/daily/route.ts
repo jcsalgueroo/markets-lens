@@ -168,6 +168,13 @@ export async function GET(req: NextRequest) {
     (v) => v === "ok" || v === "skipped (no data)"
   );
 
+  console.log("\n══ Cron results ══════════════════════════════════════");
+  for (const [k, v] of Object.entries(results)) {
+    console.log(`  ${v === "ok" ? "✅" : v === "skipped (no data)" ? "⏭️" : "❌"} ${k}: ${v}`);
+  }
+  console.log(`  Overall: ${allOk ? "SUCCESS" : "PARTIAL FAILURE"}`);
+  console.log("══════════════════════════════════════════════════════\n");
+
   return NextResponse.json(
     { success: allOk, results, ranAt: new Date().toISOString() },
     { status: allOk ? 200 : 207 }

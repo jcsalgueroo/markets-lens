@@ -50,7 +50,7 @@ export async function blobWriteHistory(
   const blob = await put(`history/${dataset}.json`, JSON.stringify(payload), {
     access: "public",
     contentType: "application/json",
-    allowOverwrite: true,
+    addRandomSuffix: false,
   });
   return blob.url;
 }
