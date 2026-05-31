@@ -20,6 +20,7 @@ import { CommoditiesHistoryChart } from "@/components/charts/CommoditiesHistoryC
 import { TRMHistoryChart } from "@/components/charts/TRMHistoryChart";
 import { GlobalMacroChart } from "@/components/charts/GlobalMacroChart";
 import { YieldCurveChart } from "@/components/charts/YieldCurveChart";
+import { GoldCopperRatioChart } from "@/components/charts/GoldCopperRatioChart";
 import { PrintButton } from "@/components/ui/PrintButton";
 import { StalenessAlert } from "@/components/ui/StalenessAlert";
 
@@ -225,12 +226,36 @@ function FixedIncomeTab({ fi }: { fi: FixedIncomeSnapshot | null }) {
   );
 }
 
+// Brent absolute price series — reads from the commodities blob
+const BRENT_SERIES = [
+  { id: "BZ=F", label: "Brent Crude ($/bbl)", color: "#a78bfa", format: "index" as const },
+];
+
 function CommoditiesTab({ com }: { com: CommoditiesSnapshot | null }) {
   return (
     <div className="space-y-6">
+      {/* Normalized multi-commodity performance */}
       <SectionCard title="Commodities — Normalized Price History">
         <CommoditiesHistoryChart defaultTimeframe="1Y" />
       </SectionCard>
+
+      {/* Brent absolute price + Gold/Copper ratio side by side */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SectionCard title="Brent Crude — Price ($/bbl)">
+          <GlobalMacroChart
+            dataset="commodities"
+            seriesDefs={BRENT_SERIES}
+            defaultTimeframe="1Y"
+            height={240}
+            note="Brent crude front-month contract · $/barrel · weekly · Source: Yahoo Finance BZ=F"
+          />
+        </SectionCard>
+        <SectionCard title="Gold / Copper Ratio">
+          <GoldCopperRatioChart defaultTimeframe="1Y" />
+        </SectionCard>
+      </div>
+
+      {/* Snapshot table */}
       <SectionCard title="Commodities">
         <CommoditiesTable
           energy={com?.energy ?? []}

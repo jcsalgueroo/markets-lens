@@ -76,11 +76,22 @@ async function fetchFredCsvRaw(seriesId: string): Promise<FredObservation[]> {
 
 /**
  * Fetch all observations for a FRED series, oldest → newest.
- * Uses the keyed JSON API when FRED_API_KEY is set; CSV otherwise.
+ * Uses the keyed JSON API when FRED_API_KEY is set; falls back to the
+ * public CSV endpoint if the API call fails (rate-limit, transient error,
+ * invalid key, etc.).  This ensures data is always returned even when the
+ * API key is temporarily unavailable.
  */
 export async function fetchFredCsv(seriesId: string): Promise<FredObservation[]> {
   if (process.env.FRED_API_KEY) {
-    return fetchFredApi(seriesId);
+    try {
+      return await fetchFredApi(seriesId);
+    } catch (err) {
+      console.warn(
+        `[FRED] API key call failed for ${seriesId} — falling back to CSV. ` +
+        `Error: ${err instanceof Error ? err.message : String(err)}`
+      );
+      return fetchFredCsvRaw(seriesId);
+    }
   }
   return fetchFredCsvRaw(seriesId);
 }
