@@ -11,7 +11,7 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN!,
 });
 
-const SNAPSHOT_TTL = 90_000; // seconds (~25 h)
+const SNAPSHOT_TTL = 324_000; // seconds (90 h) — covers Friday→Monday weekend gap
 
 export type SnapshotKey =
   | "snapshot:equities"
