@@ -173,7 +173,7 @@ function extractGlobalHistory(data: unknown): HistorySeries {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
   if (!authorized(req)) {
@@ -194,16 +194,19 @@ export async function GET(req: NextRequest) {
 
   const fetched: Record<string, unknown> = {};
 
-  for (const [kvKey, apiPath] of datasets) {
-    try {
-      const data = await fetchJson(apiPath);
-      await kvSet(kvKey, data);
-      fetched[apiPath] = data;
-      results[`kv:${kvKey}`] = "ok";
-    } catch (e: unknown) {
-      results[`kv:${kvKey}`] = e instanceof Error ? e.message : String(e);
-    }
-  }
+  // Fetch all datasets concurrently — cuts wall-clock time from ~60s to ~15s.
+  await Promise.all(
+    datasets.map(async ([kvKey, apiPath]) => {
+      try {
+        const data = await fetchJson(apiPath);
+        await kvSet(kvKey, data);
+        fetched[apiPath] = data;
+        results[`kv:${kvKey}`] = "ok";
+      } catch (e: unknown) {
+        results[`kv:${kvKey}`] = e instanceof Error ? e.message : String(e);
+      }
+    })
+  );
 
   await kvSetTimestamp();
 
