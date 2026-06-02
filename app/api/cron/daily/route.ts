@@ -173,7 +173,7 @@ function extractGlobalHistory(data: unknown): HistorySeries {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function GET(req: NextRequest) {
   if (!authorized(req)) {
